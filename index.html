@@ -25,6 +25,27 @@
   </style>
 </helmet>
 
+<sc-if value="{{ showLogin }}" hint-placeholder-val="{{ false }}">
+  <div style="position: fixed; inset: 0; z-index: 100; background: rgba(3,7,16,0.72); backdrop-filter: blur(4px); display: grid; place-items: center;" data-screen-label="Login">
+    <div style="width: 360px; max-width: 92vw; background: linear-gradient(165deg, #0e1730, #0a1120); border: 1px solid #1e2c4a; border-radius: 16px; padding: 26px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+        <div style="width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(135deg, #0ea5e9, #2563eb); display: grid; place-items: center; font-weight: 700; font-size: 13px; color: #fff;">CL</div>
+        <div style="font-size: 16px; font-weight: 700; color: #f2f6ff;">Acesso do administrador</div>
+      </div>
+      <div style="font-size: 12px; color: #6b7ea6; margin-bottom: 18px;">Entre para liberar a edicao. Visitantes podem apenas visualizar.</div>
+      <input value="{{ loginEmail }}" onInput="{{ onLoginEmail }}" placeholder="E-mail" style="width: 100%; background: #0d1526; border: 1px solid #1a2745; border-radius: 10px; padding: 11px 14px; color: #e8eefc; font-size: 14px; font-family: 'Space Grotesk', sans-serif; outline: none; margin-bottom: 10px;" style-focus="border-color: #38bdf8;">
+      <input type="password" value="{{ loginPw }}" onInput="{{ onLoginPw }}" placeholder="Senha" style="width: 100%; background: #0d1526; border: 1px solid #1a2745; border-radius: 10px; padding: 11px 14px; color: #e8eefc; font-size: 14px; font-family: 'Space Grotesk', sans-serif; outline: none;" style-focus="border-color: #38bdf8;">
+      <sc-if value="{{ loginErr }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top: 10px; color: #fda4af; font-size: 12px;">{{ loginErr }}</div>
+      </sc-if>
+      <div style="display: flex; gap: 10px; margin-top: 18px;">
+        <button onClick="{{ onLoginSubmit }}" style="flex: 1; background: linear-gradient(135deg, #0ea5e9, #2563eb); border: none; color: #fff; border-radius: 10px; padding: 11px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'Space Grotesk', sans-serif;">Entrar</button>
+        <button onClick="{{ onLoginCancel }}" style="background: #0d1526; border: 1px solid #1a2745; color: #8fa3cc; border-radius: 10px; padding: 11px 16px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'Space Grotesk', sans-serif;">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
 <div style="min-height: 100vh; background: #070c18; color: #dbe4f5; font-family: 'Space Grotesk', sans-serif; padding-bottom: 60px;" data-screen-label="CentraLux Ponto — Dashboard">
 
   <!-- ===== Header ===== -->
@@ -43,6 +64,7 @@
         <span style="width: 8px; height: 8px; border-radius: 50%; background: {{ statusColor }}; animation: pulse-dot 2s infinite;"></span>
         <span style="font-size: 12px; color: #8fa3cc; font-family: 'JetBrains Mono', monospace;">{{ statusLabel }}</span>
       </div>
+      <button onClick="{{ onAdminBtn }}" style="background: {{ adminBtnBg }}; border: 1px solid {{ adminBtnBorder }}; color: {{ adminBtnColor }}; border-radius: 10px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Space Grotesk', sans-serif;" style-hover="border-color: #38bdf8;">{{ adminBtnLabel }}</button>
       <button onClick="{{ onToggleSalaries }}" style="background: {{ salBtnBg }}; border: 1px solid {{ salBtnBorder }}; color: #4ade80; border-radius: 10px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Space Grotesk', sans-serif;" style-hover="border-color: #4ade80;">R$ Salários</button>
       <button onClick="{{ onRefresh }}" style="background: #0d1526; border: 1px solid #1a2745; color: #38bdf8; border-radius: 10px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Space Grotesk', sans-serif;" style-hover="border-color: #38bdf8; box-shadow: 0 0 12px rgba(56,189,248,0.25);">↻ Atualizar</button>
     </div>
@@ -241,13 +263,39 @@ class Component extends DCLogic {
   state = {
     loading: true, error: null, source: null,
     employees: [], monthLabel: '', search: '', dept: 'Todos',
-    selectedId: null, salaries: {}, showSalaries: false
+    selectedId: null, salaries: {}, showSalaries: false, isAdmin: false,
+    showLogin: false, loginEmail: '', loginPw: '', loginErr: ''
   };
 
   setSalary(id, rawVal) {
+    if (!this.state.isAdmin) return;
     const salaries = { ...this.state.salaries, [id]: rawVal.replace(',', '.') };
     this.setState({ salaries });
     try { localStorage.setItem('clx-salaries', JSON.stringify(salaries)); } catch (e) {}
+  }
+
+  ADMIN_EMAIL = 'pedro.liang@gmail.com';
+  ADMIN_HASH = '1e799f3f1f995d110a760b84dc3e0df617622747720ea507e5df52e37ebbc4e1';
+
+  openLogin() { this.setState({ showLogin: true, loginEmail: '', loginPw: '', loginErr: '' }); }
+  closeLogin() { this.setState({ showLogin: false, loginErr: '' }); }
+  logout() { this.setState({ isAdmin: false }); try { localStorage.removeItem('clx-admin'); } catch (e) {} }
+
+  async submitLogin() {
+    const email = (this.state.loginEmail || '').trim().toLowerCase();
+    const pw = this.state.loginPw || '';
+    try {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+      const hex = Array.from(new Uint8Array(buf)).map(x => x.toString(16).padStart(2, '0')).join('');
+      if (email === this.ADMIN_EMAIL && hex === this.ADMIN_HASH) {
+        this.setState({ isAdmin: true, showLogin: false, loginPw: '', loginErr: '' });
+        try { localStorage.setItem('clx-admin', hex); } catch (e) {}
+      } else {
+        this.setState({ loginErr: 'E-mail ou senha incorretos.' });
+      }
+    } catch (e) {
+      this.setState({ loginErr: 'Nao foi possivel validar neste navegador.' });
+    }
   }
 
   SHEET_ID = '1fRqUo8vH4awjCwV12U0fhR2bdBSRGFUVMlU8PozUsoQ';
@@ -255,6 +303,7 @@ class Component extends DCLogic {
 
   componentDidMount() {
     try { this.setState({ salaries: JSON.parse(localStorage.getItem('clx-salaries') || '{}') }); } catch (e) {}
+    try { if (localStorage.getItem('clx-admin') === this.ADMIN_HASH) this.setState({ isAdmin: true }); } catch (e) {}
     this.load();
   }
 
@@ -510,6 +559,20 @@ class Component extends DCLogic {
       search: st.search,
       onSearch: ev => this.setState({ search: ev.target.value }),
       onRefresh: () => this.load(),
+      isAdmin: st.isAdmin,
+      onAdminBtn: () => (st.isAdmin ? this.logout() : this.openLogin()),
+      adminBtnLabel: st.isAdmin ? '\u{1F513} Sair' : '\u{1F512} Entrar',
+      adminBtnColor: st.isAdmin ? '#4ade80' : '#8fa3cc',
+      adminBtnBg: st.isAdmin ? 'rgba(74,222,128,0.12)' : '#0d1526',
+      adminBtnBorder: st.isAdmin ? '#4ade80' : '#1a2745',
+      showLogin: st.showLogin,
+      loginEmail: st.loginEmail,
+      loginPw: st.loginPw,
+      loginErr: st.loginErr,
+      onLoginEmail: ev => this.setState({ loginEmail: ev.target.value }),
+      onLoginPw: ev => this.setState({ loginPw: ev.target.value }),
+      onLoginSubmit: () => this.submitLogin(),
+      onLoginCancel: () => this.closeLogin(),
       showSalaries: st.showSalaries,
       onToggleSalaries: () => this.setState({ showSalaries: !st.showSalaries }),
       salBtnBg: st.showSalaries ? 'rgba(74,222,128,0.12)' : '#0d1526',
