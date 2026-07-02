@@ -375,9 +375,8 @@ class Component extends DCLogic {
     const breakEnd = hasBreak ? times[2] : null;
 
     if (isSun) {
-      // Domingo: fora da jornada — tudo é hora extra (arredondada p/ cima)
-      const raw = Math.max(0, exit - entry - breakMin);
-      const ot = raw > 0 ? Math.ceil(raw / 60) * 60 : 0;
+      // Domingo: fora da jornada — tudo é hora extra (minutos exatos, sem arredondar)
+      const ot = Math.max(0, exit - entry - breakMin);
       return { present: true, delay: 0, normal: 0, ot, entry, exit, breakStart, breakEnd, earlyExit: 0 };
     }
 
@@ -400,7 +399,7 @@ class Component extends DCLogic {
     let ot = 0;
     if (exit > schedExit) {
       const raw = Math.min(exit, otEnd) - schedExit;
-      if (raw >= cfg.exitTol) ot = Math.ceil(raw / 60) * 60;
+      if (raw >= cfg.exitTol) ot = raw; // minutos exatos, sem arredondar p/ cima
     }
     const earlyExit = Math.max(0, schedExit - exit);
     return { present: true, delay: entryDelay + lunchDelay, normal, ot, entry, exit, breakStart, breakEnd, earlyExit };
@@ -539,4 +538,7 @@ class Component extends DCLogic {
     };
   }
 }
-</scri
+</script>
+</body>
+</html>
+      
