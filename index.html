@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    html, body { margin: 0; padding: 0; background: #070c18; }
+    * { box-sizing: border-box; }
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: #0a1122; }
+    ::-webkit-scrollbar-thumb { background: #1e2c4a; border-radius: 5px; }
+    ::-webkit-scrollbar-thumb:hover { background: #2c3f68; }
+    @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+    input::placeholder { color: #4a5a7d; }
+  </style>
+</helmet>
+
+<div style="min-height: 100vh; background: #070c18; color: #dbe4f5; font-family: 'Space Grotesk', sans-serif; padding-bottom: 60px;" data-screen-label="CentraLux Ponto — Dashboard">
+
+  <!-- ===== Header ===== -->
+  <header style="position: sticky; top: 0; z-index: 50; background: rgba(7,12,24,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid #16203a; padding: 0 32px;">
+    <div style="max-width: 1440px; margin: 0 auto; display: flex; align-items: center; gap: 20px; height: 68px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 34px; height: 34px; border-radius: 9px; background: linear-gradient(135deg, #0ea5e9, #2563eb); display: grid; place-items: center; font-weight: 700; font-size: 15px; color: #ffffff; box-shadow: 0 0 18px rgba(14,165,233,0.45);">CL</div>
+        <div>
+          <div style="font-size: 17px; font-weight: 700; letter-spacing: 0.02em; color: #f2f6ff;">CentraLux <span style="color: #38bdf8;">Ponto</span></div>
+          <div style="font-size: 11px; color: #6b7ea6; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.08em;">CONTROLE DE PONTO &amp; HORAS EXTRAS</div>
+        </div>
+      </div>
+      <div style="flex: 1;"></div>
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #8fa3cc; text-transform: uppercase; letter-spacing: 0.1em;">{{ monthLabel }}</div>
+      <div style="display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 20px; background: #0d1526; border: 1px solid #1a2745;">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: {{ statusColor }}; animation: pulse-dot 2s infinite;"></span>
+        <span style="font-size: 12px; color: #8fa3cc; font-family: 'JetBrains Mono', monospace;">{{ statusLabel }}</span>
+      </div>
+      <button onClick="{{ onToggleSalaries }}" style="background: {{ salBtnBg }}; border: 1px solid {{ salBtnBorder }}; color: #4ade80; border-radius: 10px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Space Grotesk', sans-serif;" style-hover="border-color: #4ade80;">R$ Salários</button>
+      <button onClick="{{ onRefresh }}" style="background: #0d1526; border: 1px solid #1a2745; color: #38bdf8; border-radius: 10px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Space Grotesk', sans-serif;" style-hover="border-color: #38bdf8; box-shadow: 0 0 12px rgba(56,189,248,0.25);">↻ Atualizar</button>
+    </div>
+  </header>
+
+  <div style="max-width: 1440px; margin: 0 auto; padding: 28px 32px 0;">
+
+    <sc-if value="{{ errorMsg }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-bottom: 20px; padding: 14px 18px; border-radius: 12px; background: rgba(244,63,94,0.08); border: 1px solid rgba(244,63,94,0.35); color: #fda4af; font-size: 13px;">{{ errorMsg }}</div>
+    </sc-if>
+
+    <sc-if value="{{ showSalaries }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-bottom: 26px; background: linear-gradient(165deg, #0e1730, #0a1120); border: 1px solid #1e2c4a; border-radius: 16px; overflow: hidden;" data-screen-label="Painel de salários">
+        <div style="padding: 18px 24px; border-bottom: 1px solid #16203a; display: flex; align-items: center; gap: 14px;">
+          <div>
+            <div style="font-size: 16px; font-weight: 700; color: #f2f6ff;">Salários dos funcionários</div>
+            <div style="font-size: 12px; color: #6b7ea6; margin-top: 2px;">Edite o salário base de cada um — os valores ficam salvos neste navegador e recalculam as horas extras na hora.</div>
+          </div>
+          <div style="flex: 1;"></div>
+          <button onClick="{{ onToggleSalaries }}" style="background: #0d1526; border: 1px solid #1a2745; color: #8fa3cc; border-radius: 10px; padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'Space Grotesk', sans-serif;" style-hover="border-color: #38bdf8; color: #38bdf8;">Fechar ✕</button>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1px; background: #16203a;">
+          <sc-for list="{{ salaryRows }}" as="s" hint-placeholder-count="6">
+            <div style="background: #0c1428; padding: 14px 18px; display: flex; align-items: center; gap: 12px;">
+              <div style="width: 36px; height: 36px; border-radius: 10px; background: #101a30; border: 1px solid #1e2c4a; display: grid; place-items: center; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: #38bdf8; flex-shrink: 0;">{{ s.id }}</div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 13px; font-weight: 600; color: #f2f6ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ s.name }}</div>
+                <div style="font-size: 10px; color: #6b7ea6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ s.dept }}</div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                <span style="font-size: 11px; color: #6b7ea6; font-family: 'JetBrains Mono', monospace;">R$</span>
+                <input value="{{ s.value }}" onInput="{{ s.onInput }}" style="width: 96px; background: #0d1526; border: 1px solid {{ s.border }}; border-radius: 8px; padding: 8px 10px; color: #e8eefc; font-size: 13px; font-family: 'JetBrains Mono', monospace; outline: none; text-align: right;" style-focus="border-color: #4ade80;">
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ===== Stats ===== -->
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 26px;">
+      <div style="background: linear-gradient(160deg, #0d1526, #0a1120); border: 1px solid #1a2745; border-radius: 14px; padding: 18px 20px;">
+        <div style="font-size: 11px; color: #6b7ea6; text-transform: uppercase; letter-spacing: 0.1em; font-family: 'JetBrains Mono', monospace;">Funcionários</div>
+        <div style="font-size: 30px; font-weight: 700; color: #f2f6ff; margin-top: 6px;">{{ statEmployees }}</div>
+      </div>
+      <div style="background: linear-gradient(160deg, #0d1526, #0a1120); border: 1px solid #1a2745; border-radius: 14px; padding: 18px 20px;">
+        <div style="font-size: 11px; color: #6b7ea6; text-transform: uppercase; letter-spacing: 0.1em; font-family: 'JetBrains Mono', monospace;">Horas extras no mês</div>
+        <div style="font-size: 30px; font-weight: 700; color: #38bdf8; margin-top: 6px; text-shadow: 0 0 22px rgba(56,189,248,0.4);">{{ statOtHours }}</div>
+      </div>
+      <div style="background: linear-gradient(160deg, #0d1526, #0a1120); border: 1px solid #1a2745; border-radius: 14px; padding: 18px 20px;">
+        <div style="font-size: 11px; color: #6b7ea6; text-transform: uppercase; letter-spacing: 0.1em; font-family: 'JetBrains Mono', monospace;">Valor total de H.E.</div>
+        <div style="font-size: 30px; font-weight: 700; color: #4ade80; margin-top: 6px;">{{ statOtValue }}</div>
+      </div>
+      <div style="background: linear-gradient(160deg, #0d1526, #0a1120); border: 1px solid #1a2745; border-radius: 14px; padding: 18px 20px;">
+        <div style="font-size: 11px; color: #6b7ea6; text-transform: uppercase; letter-spacing: 0.1em; font-family: 'JetBrains Mono', monospace;">Atrasos acumulados</div>
+        <div style="font-size: 30px; font-weight: 700; color: #fbbf24; margin-top: 6px;">{{ statDelays }}</div>
+      </div>
+    </div>
+
+    <!-- ===== Search + filters ===== -->
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 22px;">
+      <input value="{{ search }}" onInput="{{ onSearch }}" placeholder="Buscar por nome, ID ou departamento…" style="flex: 1; min-width: 280px; background: #0d1526; border: 1px solid #1a2745; border-radius: 12px; padding: 12px 18px; color: #e8eefc; font-size: 14px; font-family: 'Space Grotesk', sans-serif; outline: none;" style-focus="border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(56,189,248,0.12);">
+      <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+        <sc-for list="{{ deptChips }}" as="chip" hint-placeholder-count="4">
+          <button onClick="{{ chip.onClick }}" style="background: {{ chip.bg }}; border: 1px solid {{ chip.border }}; color: {{ chip.color }}; border-radius: 20px; padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'Space Grotesk', sans-serif; white-space: nowrap;">{{ chip.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <sc-if value="{{ loading }}" hint-placeholder-val="{{ true }}">
+      <div style="padding: 80px 0; text-align: center; color: #6b7ea6; font-family: 'JetBrains Mono', monospace; font-size: 14px;">
+        <div style="width: 40px; height: 40px; margin: 0 auto 16px; border: 3px solid #1a2745; border-top-color: #38bdf8; border-radius: 50%; animation: pulse-dot 1s infinite;"></div>
+        Carregando dados da planilha…
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ ready }}" hint-placeholder-val="{{ false }}">
+      <div style="display: grid; grid-template-columns: 360px 1fr; gap: 22px; align-items: start;">
+
+        <!-- ===== Employee list ===== -->
+        <div style="display: flex; flex-direction: column; gap: 10px; max-height: calc(100vh - 120px); overflow-y: auto; padding-right: 4px; position: sticky; top: 92px;">
+          <sc-for list="{{ employees }}" as="emp" hint-placeholder-count="6">
+            <div onClick="{{ emp.onSelect }}" style="background: {{ emp.cardBg }}; border: 1px solid {{ emp.cardBorder }}; border-radius: 14px; padding: 14px 16px; cursor: pointer; display: flex; align-items: center; gap: 14px; transition: border-color 0.15s;" style-hover="border-color: #38bdf8;">
+              <div style="width: 42px; height: 42px; border-radius: 12px; background: #101a30; border: 1px solid #1e2c4a; display: grid; place-items: center; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; color: #38bdf8; flex-shrink: 0;">{{ emp.id }}</div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 14px; font-weight: 600; color: #f2f6ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ emp.name }}</div>
+                <div style="font-size: 11px; color: #6b7ea6; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ emp.dept }}</div>
+              </div>
+              <div style="text-align: right; flex-shrink: 0;">
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; color: #38bdf8;">{{ emp.otLabel }}</div>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {{ emp.delayColor }}; margin-top: 2px;">{{ emp.delayLabel }}</div>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ emptyList }}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 40px 20px; text-align: center; color: #4a5a7d; font-size: 13px;">Nenhum funcionário encontrado.</div>
+          </sc-if>
+        </div>
+
+        <!-- ===== Detail panel ===== -->
+        <div>
+          <sc-if value="{{ noSelection }}" hint-placeholder-val="{{ true }}">
+            <div style="border: 1px dashed #1e2c4a; border-radius: 16px; padding: 90px 40px; text-align: center; color: #4a5a7d;">
+              <div style="font-size: 34px; margin-bottom: 12px;">⊙</div>
+              <div style="font-size: 15px;">Selecione um funcionário para ver o relatório individual do mês.</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ hasSelection }}" hint-placeholder-val="{{ false }}">
+            <div style="background: linear-gradient(165deg, #0e1730, #0a1120); border: 1px solid #1e2c4a; border-radius: 16px; overflow: hidden;" data-screen-label="Relatório individual">
+
+              <div style="padding: 22px 26px; border-bottom: 1px solid #16203a; display: flex; align-items: center; gap: 18px; flex-wrap: wrap;">
+                <div>
+                  <div style="font-size: 21px; font-weight: 700; color: #f2f6ff;">{{ sel.name }}</div>
+                  <div style="font-size: 12px; color: #6b7ea6; font-family: 'JetBrains Mono', monospace; margin-top: 3px;">ID {{ sel.id }} · {{ sel.dept }}</div>
+                </div>
+                <div style="flex: 1;"></div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <label style="font-size: 12px; color: #8fa3cc;">Salário base (R$)</label>
+                  <input value="{{ sel.salaryInput }}" onInput="{{ sel.onSalaryInput }}" style="width: 120px; background: #0d1526; border: 1px solid #1a2745; border-radius: 10px; padding: 9px 12px; color: #e8eefc; font-size: 14px; font-family: 'JetBrains Mono', monospace; outline: none; text-align: right;" style-focus="border-color: #38bdf8;">
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: #16203a;">
+                <div style="background: #0c1428; padding: 16px 18px;">
+                  <div style="font-size: 10px; color: #6b7ea6; text-transform: uppercase; letter-spacing: 0.1em; font-family: 'JetBrains Mono', monospace;">Salário base</div>
+                  <div style="font-size: 17px; font-weight: 700; color: #f2f6ff; margin-top: 5px;">{{ sel.salaryFmt }}</div>
+                </div>
+                <div style="background: #0c1428; padding: 16px 18px;">
+                  <div style="font-size: 10px; color: #6b7ea6; text-transform: uppercase; letter-spacing: 0.1em; font-family: 'JetBrains Mono', monospace;">Hora normal (÷220)</div>
+                  <div style="font-size: 17px; font-weight: 700; color: #f2f6ff; margin-top: 5px;">{{ sel.rateFmt }}</div>
+                </div>
+                <div style="background: #0c1428; padding: 16px 18px;">
+                  <div style="font-size: 10px; color: #6b7ea6; text-transform: uppercase; letter-spacing: 0.1em; font-family: 'JetBrains Mono', monospace;">Horas extras (mês)</div>
+                  <div style="font-size: 17px; font-weight: 700; color: #38bdf8; margin-top: 5px;">{{ sel.otTotal }}</div>
+                </div>
+                <div style="background: #0c1428; padding: 16px 18px;">
+                  <div style="font-size: 10px; color: #6b7ea6; text-transform: uppercase; letter-spacing: 0.1em; font-family: 'JetBrains Mono', monospace;">Valor H.E. (+60%)</div>
+                  <div style="font-size: 17px; font-weight: 700; color: #4ade80; margin-top: 5px;">{{ sel.otValueFmt }}</div>
+                </div>
+                <div style="background: #0c1428; padding: 16px 18px;">
+                  <div style="font-size: 10px; color: #6b7ea6; text-transform: uppercase; letter-spacing: 0.1em; font-family: 'JetBrains Mono', monospace;">Atrasos (mês)</div>
+                  <div style="font-size: 17px; font-weight: 700; color: {{ sel.delayColor }}; margin-top: 5px;">{{ sel.delayTotal }}</div>
+                </div>
+              </div>
+
+              <!-- Espelho de ponto -->
+              <div style="padding: 20px 26px 26px;">
+                <div style="font-size: 12px; color: #8fa3cc; text-transform: uppercase; letter-spacing: 0.12em; font-family: 'JetBrains Mono', monospace; margin-bottom: 12px;">Espelho de ponto — {{ monthLabel }}</div>
+                <div style="overflow-x: auto; border: 1px solid #16203a; border-radius: 12px;">
+                  <div style="display: grid; grid-template-columns: 52px 52px 1fr 1fr 1fr 1fr 90px 90px 90px 100px; min-width: 880px; font-family: 'JetBrains Mono', monospace; font-size: 12px;">
+                    <div style="padding: 10px 8px; background: #0c1428; color: #6b7ea6; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #16203a;">Dia</div>
+                    <div style="padding: 10px 8px; background: #0c1428; color: #6b7ea6; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #16203a;">Sem</div>
+                    <div style="padding: 10px 8px; background: #0c1428; color: #6b7ea6; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #16203a;">Entrada</div>
+                    <div style="padding: 10px 8px; background: #0c1428; color: #6b7ea6; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #16203a;">Alm. saída</div>
+                    <div style="padding: 10px 8px; background: #0c1428; color: #6b7ea6; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #16203a;">Alm. retorno</div>
+                    <div style="padding: 10px 8px; background: #0c1428; color: #6b7ea6; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #16203a;">Saída</div>
+                    <div style="padding: 10px 8px; background: #0c1428; color: #6b7ea6; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #16203a;">Atraso</div>
+                    <div style="padding: 10px 8px; background: #0c1428; color: #6b7ea6; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #16203a;">H. normal</div>
+                    <div style="padding: 10px 8px; background: #0c1428; color: #6b7ea6; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #16203a;">H. extra</div>
+                    <div style="padding: 10px 8px; background: #0c1428; color: #6b7ea6; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #16203a;">Valor H.E.</div>
+                    <sc-for list="{{ sel.rows }}" as="d" hint-placeholder-count="10">
+                      <div style="display: contents;">
+                        <div style="padding: 9px 8px; background: {{ d.bg }}; color: #dbe4f5; border-bottom: 1px solid #101a30;">{{ d.day }}</div>
+                        <div style="padding: 9px 8px; background: {{ d.bg }}; color: {{ d.dowColor }}; border-bottom: 1px solid #101a30;">{{ d.dow }}</div>
+                        <div style="padding: 9px 8px; background: {{ d.bg }}; color: #a9b8d8; border-bottom: 1px solid #101a30;">{{ d.in }}</div>
+                        <div style="padding: 9px 8px; background: {{ d.bg }}; color: #a9b8d8; border-bottom: 1px solid #101a30;">{{ d.lunchOut }}</div>
+                        <div style="padding: 9px 8px; background: {{ d.bg }}; color: #a9b8d8; border-bottom: 1px solid #101a30;">{{ d.lunchIn }}</div>
+                        <div style="padding: 9px 8px; background: {{ d.bg }}; color: #a9b8d8; border-bottom: 1px solid #101a30;">{{ d.out }}</div>
+                        <div style="padding: 9px 8px; background: {{ d.bg }}; color: {{ d.delayColor }}; border-bottom: 1px solid #101a30;">{{ d.delay }}</div>
+                        <div style="padding: 9px 8px; background: {{ d.bg }}; color: #dbe4f5; border-bottom: 1px solid #101a30;">{{ d.normal }}</div>
+                        <div style="padding: 9px 8px; background: {{ d.bg }}; color: {{ d.otColor }}; font-weight: 600; border-bottom: 1px solid #101a30;">{{ d.ot }}</div>
+                        <div style="padding: 9px 8px; background: {{ d.bg }}; color: {{ d.otColor }}; border-bottom: 1px solid #101a30;">{{ d.otVal }}</div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="margin-top: 14px; font-size: 11px; color: #4a5a7d; line-height: 1.7;">
+                  Regras: entrada 08:30 (tolerância 15 min) · almoço 1h (tolerância 5 min) · saída 17:30 (sáb 12:30) · H.E. arredondada p/ cima até 21:00 (sáb 16:30) · valor = hora normal × 1,6 · saída até {{ exitTolLabel }} min após o horário não gera H.E.
+                </div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;defaultSalary&quot;: { &quot;editor&quot;: &quot;int&quot;, &quot;default&quot;: 2200, &quot;tsType&quot;: &quot;number&quot;, &quot;min&quot;: 1000, &quot;max&quot;: 20000, &quot;step&quot;: 50, &quot;unit&quot;: &quot;R$&quot;, &quot;section&quot;: &quot;Regras de cálculo&quot; },
+  &quot;otCoefficient&quot;: { &quot;editor&quot;: &quot;float&quot;, &quot;default&quot;: 1.6, &quot;tsType&quot;: &quot;number&quot;, &quot;min&quot;: 1, &quot;max&quot;: 3, &quot;step&quot;: 0.1, &quot;section&quot;: &quot;Regras de cálculo&quot; },
+  &quot;exitToleranceMin&quot;: { &quot;editor&quot;: &quot;int&quot;, &quot;default&quot;: 15, &quot;tsType&quot;: &quot;number&quot;, &quot;min&quot;: 0, &quot;max&quot;: 60, &quot;step&quot;: 5, &quot;unit&quot;: &quot;min&quot;, &quot;section&quot;: &quot;Regras de cálculo&quot; }
+}">
+class Component extends DCLogic {
+  state = {
+    loading: true, error: null, source: null,
+    employees: [], monthLabel: '', search: '', dept: 'Todos',
+    selectedId: null, salaries: {}, showSalaries: false
+  };
+
+  setSalary(id, rawVal) {
+    const salaries = { ...this.state.salaries, [id]: rawVal.replace(',', '.') };
+    this.setState({ salaries });
+    try { localStorage.setItem('clx-salaries', JSON.stringify(salaries)); } catch (e) {}
+  }
+
+  SHEET_ID = '1fRqUo8vH4awjCwV12U0fhR2bdBSRGFUVMlU8PozUsoQ';
+  GID = '540941492';
+
+  componentDidMount() {
+    try { this.setState({ salaries: JSON.parse(localStorage.getItem('clx-salaries') || '{}') }); } catch (e) {}
+    this.load();
+  }
+
+  async load() {
+    this.setState({ loading: true, error: null });
+    const urls = [
+      `https://docs.google.com/spreadsheets/d/${this.SHEET_ID}/gviz/tq?tqx=out:csv&gid=${this.GID}`,
+      `https://docs.google.com/spreadsheets/d/${this.SHEET_ID}/export?format=csv&gid=${this.GID}`
+    ];
+    let text = null, lastErr = null;
+    for (const url of urls) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        text = await res.text();
+        break;
+      } catch (e) { lastErr = e; }
+    }
+    if (text) {
+      try {
+        const { employees, monthLabel } = this.parseSheet(this.parseCSV(text));
+        this.setState({ employees, monthLabel, loading: false, source: 'live', error: null });
+        try { localStorage.setItem('clx-cache', JSON.stringify({ employees, monthLabel, ts: Date.now() })); } catch (e) {}
+        return;
+      } catch (e) { lastErr = e; }
+    }
+    // fallback: cache
+    try {
+      const cache = JSON.parse(localStorage.getItem('clx-cache') || 'null');
+      if (cache && cache.employees && cache.employees.length) {
+        this.setState({
+          employees: cache.employees, monthLabel: cache.monthLabel, loading: false, source: 'cache',
+          error: 'Não foi possível atualizar da planilha agora — exibindo os últimos dados salvos (' + new Date(cache.ts).toLocaleString('pt-BR') + '). Erro: ' + (lastErr && lastErr.message)
+        });
+        return;
+      }
+    } catch (e) {}
+    this.setState({ loading: false, source: 'error', error: 'Falha ao carregar a planilha do Google Sheets: ' + (lastErr && lastErr.message) + '. Verifique se a planilha está pública ("qualquer pessoa com o link") e tente atualizar.' });
+  }
+
+  parseCSV(text) {
+    const rows = []; let row = [], cur = '', inQ = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (inQ) {
+        if (ch === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else inQ = false; }
+        else cur += ch;
+      } else if (ch === '"') inQ = true;
+      else if (ch === ',') { row.push(cur); cur = ''; }
+      else if (ch === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; }
+      else if (ch !== '\r') cur += ch;
+    }
+    if (cur.length || row.length) { row.push(cur); rows.push(row); }
+    return rows;
+  }
+
+  toMin(s) {
+    const m = /^(\d{1,2}):(\d{2})$/.exec((s || '').trim());
+    if (!m) return null;
+    return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+  }
+
+  parseSheet(rows) {
+    let monthLabel = '';
+    const monthRe = /(janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\s*\/?\s*(\d{4})/i;
+    for (const r of rows) {
+      for (const c of r) {
+        const m = monthRe.exec(c || '');
+        if (m) { monthLabel = m[1].toUpperCase() + ' / ' + m[2]; break; }
+      }
+      if (monthLabel) break;
+    }
+    const employees = [];
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i].map(c => (c || '').trim());
+      const idIdx = r.findIndex(c => c === 'ID');
+      if (idIdx === -1) continue;
+      const nomeIdx = r.findIndex(c => c === 'Nome');
+      if (nomeIdx === -1) continue;
+      const nextVal = from => { for (let k = from + 1; k < r.length; k++) if (r[k]) return r[k]; return ''; };
+      const id = nextVal(idIdx);
+      const name = nextVal(nomeIdx);
+      const depIdx = r.findIndex(c => /^Depart/i.test(c));
+      const dept = depIdx > -1 ? (nextVal(depIdx) || '—') : '—';
+      const dayRow = (rows[i + 1] || []).map(c => (c || '').trim());
+      const dowRow = (rows[i + 2] || []).map(c => (c || '').trim());
+      const punchRow = (rows[i + 3] || []).map(c => (c || '').trim());
+      const days = []; let prev = 0;
+      for (let c = 0; c < dayRow.length; c++) {
+        const d = parseInt(dayRow[c], 10);
+        const dw = (dowRow[c] || '').toUpperCase().slice(0, 3);
+        if (!d || !['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB', 'DOM'].includes(dw)) continue;
+        if (d < prev) break; // next month spillover
+        prev = d;
+        const times = (punchRow[c] || '').split(/\s+/).map(t => this.toMin(t)).filter(v => v != null);
+        days.push({ day: d, dow: dw, times });
+      }
+      if (name && days.length) employees.push({ id, name, dept, days });
+      i += 3;
+    }
+    if (!employees.length) throw new Error('Formato da planilha não reconhecido (nenhum bloco ID/Nome encontrado).');
+    return { employees, monthLabel };
+  }
+
+  cfg() {
+    return {
+      entryTol: 15,
+      lunchTolExtra: 5,
+      exitTol: Math.max(0, Math.round(this.props.exitToleranceMin ?? 15)),
+      coef: this.props.otCoefficient ?? 1.6,
+      defaultSalary: this.props.defaultSalary ?? 2200
+    };
+  }
+
+  computeDay(rec, cfg) {
+    const { times, dow } = rec;
+    const isSat = dow === 'SAB', isSun = dow === 'DOM';
+    if (times.length < 2) return { present: false, delay: 0, normal: 0, ot: 0, entry: null, exit: null, breakStart: null, breakEnd: null };
+    const entry = times[0], exit = times[times.length - 1];
+    let breakMin = 0;
+    for (let i = 1; i + 1 < times.length; i += 2) breakMin += times[i + 1] - times[i];
+    const hasBreak = times.length >= 4;
+    const breakStart = hasBreak ? times[1] : null;
+    const breakEnd = hasBreak ? times[2] : null;
+
+    if (isSun) {
+      // Domingo: fora da jornada — tudo é hora extra (arredondada p/ cima)
+      const raw = Math.max(0, exit - entry - breakMin);
+      const ot = raw > 0 ? Math.ceil(raw / 60) * 60 : 0;
+      return { present: true, delay: 0, normal: 0, ot, entry, exit, breakStart, breakEnd, earlyExit: 0 };
+    }
+
+    const schedEntry = 8 * 60 + 30;
+    const schedExit = isSat ? 12 * 60 + 30 : 17 * 60 + 30;
+    const otEnd = isSat ? 16 * 60 + 30 : 21 * 60;
+
+    const entryDelay = entry > schedEntry + cfg.entryTol ? entry - schedEntry : 0;
+    const effEntry = entryDelay ? entry : schedEntry;
+
+    let lunchDelay = 0, countedBreak = 0;
+    if (!isSat && hasBreak) {
+      lunchDelay = breakMin > 60 + cfg.lunchTolExtra ? breakMin - 60 : 0;
+      countedBreak = breakMin <= 60 + cfg.lunchTolExtra ? 60 : breakMin;
+    } else if (isSat) {
+      countedBreak = breakMin;
+    }
+
+    const normal = Math.max(0, Math.min(exit, schedExit) - effEntry - countedBreak);
+    let ot = 0;
+    if (exit > schedExit) {
+      const raw = Math.min(exit, otEnd) - schedExit;
+      if (raw >= cfg.exitTol) ot = Math.ceil(raw / 60) * 60;
+    }
+    const earlyExit = Math.max(0, schedExit - exit);
+    return { present: true, delay: entryDelay + lunchDelay, normal, ot, entry, exit, breakStart, breakEnd, earlyExit };
+  }
+
+  fmtT(min) { return min == null ? '—' : String(Math.floor(min / 60)).padStart(2, '0') + ':' + String(min % 60).padStart(2, '0'); }
+  fmtH(min) { if (!min) return '—'; return Math.floor(min / 60) + 'h' + String(min % 60).padStart(2, '0'); }
+  fmtBRL(v) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+
+  getSalary(id, cfg) {
+    const v = parseFloat(this.state.salaries[id]);
+    return isNaN(v) || v <= 0 ? cfg.defaultSalary : v;
+  }
+
+  renderVals() {
+    const cfg = this.cfg();
+    const st = this.state;
+    const norm = s => (s || '').toString().toLowerCase();
+
+    const computed = st.employees.map(e => {
+      const dayResults = e.days.map(d => ({ ...d, ...this.computeDay(d, cfg) }));
+      const otMin = dayResults.reduce((a, d) => a + d.ot, 0);
+      const delayMin = dayResults.reduce((a, d) => a + d.delay, 0);
+      const salary = this.getSalary(e.id, cfg);
+      const rate = salary / 220;
+      const otValue = (otMin / 60) * rate * cfg.coef;
+      return { ...e, dayResults, otMin, delayMin, salary, rate, otValue };
+    });
+
+    const depts = ['Todos', ...Array.from(new Set(computed.map(e => e.dept))).sort()];
+    const q = norm(st.search);
+    const filtered = computed.filter(e =>
+      (st.dept === 'Todos' || e.dept === st.dept) &&
+      (!q || norm(e.name).includes(q) || norm(e.id).includes(q) || norm(e.dept).includes(q))
+    );
+
+    const employees = filtered.map(e => ({
+      id: e.id, name: e.name, dept: e.dept,
+      otLabel: e.otMin ? '+' + this.fmtH(e.otMin) : '—',
+      delayLabel: e.delayMin ? '⚠ ' + this.fmtH(e.delayMin) : 'sem atraso',
+      delayColor: e.delayMin ? '#fbbf24' : '#3d4d72',
+      cardBg: st.selectedId === e.id ? 'linear-gradient(160deg, #10203c, #0c1830)' : '#0c1324',
+      cardBorder: st.selectedId === e.id ? '#38bdf8' : '#16203a',
+      onSelect: () => this.setState({ selectedId: e.id })
+    }));
+
+    const selEmp = computed.find(e => e.id === st.selectedId) || null;
+    let sel = null;
+    if (selEmp) {
+      const rows = selEmp.dayResults.map(d => {
+        const isWknd = d.dow === 'SAB' || d.dow === 'DOM';
+        const otVal = (d.ot / 60) * selEmp.rate * cfg.coef;
+        return {
+          day: String(d.day).padStart(2, '0'),
+          dow: d.dow,
+          dowColor: isWknd ? '#38bdf8' : '#6b7ea6',
+          in: this.fmtT(d.entry),
+          lunchOut: this.fmtT(d.breakStart),
+          lunchIn: this.fmtT(d.breakEnd),
+          out: this.fmtT(d.exit),
+          delay: d.delay ? this.fmtH(d.delay) : '—',
+          delayColor: d.delay ? '#fbbf24' : '#3d4d72',
+          normal: d.present ? this.fmtH(d.normal) : '—',
+          ot: d.ot ? '+' + this.fmtH(d.ot) : '—',
+          otColor: d.ot ? '#38bdf8' : '#3d4d72',
+          otVal: d.ot ? this.fmtBRL(otVal) : '—',
+          bg: d.ot ? 'rgba(56,189,248,0.05)' : (d.present ? 'transparent' : 'rgba(255,255,255,0.015)')
+        };
+      });
+      const rawSalary = st.salaries[selEmp.id];
+      sel = {
+        id: selEmp.id, name: selEmp.name, dept: selEmp.dept,
+        salaryInput: rawSalary != null && rawSalary !== '' ? String(rawSalary) : String(selEmp.salary),
+        onSalaryInput: ev => this.setSalary(selEmp.id, ev.target.value),
+        salaryFmt: this.fmtBRL(selEmp.salary),
+        rateFmt: this.fmtBRL(selEmp.rate),
+        otTotal: selEmp.otMin ? this.fmtH(selEmp.otMin) : '0h00',
+        otValueFmt: this.fmtBRL(selEmp.otValue),
+        delayTotal: selEmp.delayMin ? this.fmtH(selEmp.delayMin) : 'Nenhum',
+        delayColor: selEmp.delayMin ? '#fbbf24' : '#4ade80',
+        rows
+      };
+    }
+
+    const totOt = computed.reduce((a, e) => a + e.otMin, 0);
+    const totOtVal = computed.reduce((a, e) => a + e.otValue, 0);
+    const totDelay = computed.reduce((a, e) => a + e.delayMin, 0);
+
+    const statusMap = {
+      live: ['#4ade80', 'AO VIVO · SHEETS'],
+      cache: ['#fbbf24', 'CACHE LOCAL'],
+      error: ['#f43f5e', 'OFFLINE']
+    };
+    const [statusColor, statusLabel] = st.loading ? ['#38bdf8', 'SINCRONIZANDO…'] : (statusMap[st.source] || ['#38bdf8', '—']);
+
+    return {
+      loading: st.loading,
+      ready: !st.loading && st.employees.length > 0,
+      errorMsg: st.error || false,
+      monthLabel: st.monthLabel || '—',
+      statusColor, statusLabel,
+      statEmployees: computed.length,
+      statOtHours: this.fmtH(totOt) === '—' ? '0h00' : this.fmtH(totOt),
+      statOtValue: this.fmtBRL(totOtVal),
+      statDelays: this.fmtH(totDelay) === '—' ? '0h00' : this.fmtH(totDelay),
+      search: st.search,
+      onSearch: ev => this.setState({ search: ev.target.value }),
+      onRefresh: () => this.load(),
+      showSalaries: st.showSalaries,
+      onToggleSalaries: () => this.setState({ showSalaries: !st.showSalaries }),
+      salBtnBg: st.showSalaries ? 'rgba(74,222,128,0.12)' : '#0d1526',
+      salBtnBorder: st.showSalaries ? '#4ade80' : '#1a2745',
+      salaryRows: computed.map(e => {
+        const raw = st.salaries[e.id];
+        const hasCustom = raw != null && raw !== '' && !isNaN(parseFloat(raw));
+        return {
+          id: e.id, name: e.name, dept: e.dept,
+          value: hasCustom ? String(raw) : String(e.salary),
+          border: hasCustom ? 'rgba(74,222,128,0.45)' : '#1a2745',
+          onInput: ev => this.setSalary(e.id, ev.target.value)
+        };
+      }),
+      deptChips: depts.map(d => ({
+        label: d,
+        bg: st.dept === d ? 'rgba(56,189,248,0.14)' : '#0d1526',
+        border: st.dept === d ? '#38bdf8' : '#1a2745',
+        color: st.dept === d ? '#38bdf8' : '#8fa3cc',
+        onClick: () => this.setState({ dept: d })
+      })),
+      employees,
+      emptyList: employees.length === 0,
+      noSelection: !sel,
+      hasSelection: !!sel,
+      sel: sel || {},
+      exitTolLabel: cfg.exitTol
+    };
+  }
+}
+</script>
+</body>
+</html>
