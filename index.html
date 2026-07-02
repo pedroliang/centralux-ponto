@@ -305,10 +305,15 @@ class Component extends DCLogic {
     try { this.setState({ salaries: JSON.parse(localStorage.getItem('clx-salaries') || '{}') }); } catch (e) {}
     try { if (localStorage.getItem('clx-admin') === this.ADMIN_HASH) this.setState({ isAdmin: true }); } catch (e) {}
     this.load();
+    this._autoRefresh = setInterval(() => this.load(true), 30000);
   }
 
-  async load() {
-    this.setState({ loading: true, error: null });
+  componentWillUnmount() {
+    if (this._autoRefresh) clearInterval(this._autoRefresh);
+  }
+
+  async load(silent) {
+    if (!silent) this.setState({ loading: true, error: null });
     const urls = [
       `https://docs.google.com/spreadsheets/d/${this.SHEET_ID}/gviz/tq?tqx=out:csv&headers=0&gid=${this.GID}`,
       `https://docs.google.com/spreadsheets/d/${this.SHEET_ID}/export?format=csv&gid=${this.GID}`,
@@ -326,6 +331,7 @@ class Component extends DCLogic {
         return;
       } catch (e) { lastErr = e; }
     }
+    if (silent) return;
     // fallback: cache
     try {
       const cache = JSON.parse(localStorage.getItem('clx-cache') || 'null');
