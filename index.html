@@ -259,20 +259,16 @@ class Component extends DCLogic {
   async load() {
     this.setState({ loading: true, error: null });
     const urls = [
-      `https://docs.google.com/spreadsheets/d/${this.SHEET_ID}/gviz/tq?tqx=out:csv&gid=${this.GID}`,
-      `https://docs.google.com/spreadsheets/d/${this.SHEET_ID}/export?format=csv&gid=${this.GID}`
+      `https://docs.google.com/spreadsheets/d/${this.SHEET_ID}/gviz/tq?tqx=out:csv&headers=0&gid=${this.GID}`,
+      `https://docs.google.com/spreadsheets/d/${this.SHEET_ID}/export?format=csv&gid=${this.GID}`,
+      `https://docs.google.com/spreadsheets/d/${this.SHEET_ID}/gviz/tq?tqx=out:csv&gid=${this.GID}`
     ];
-    let text = null, lastErr = null;
+    let lastErr = null;
     for (const url of urls) {
       try {
         const res = await fetch(url);
         if (!res.ok) throw new Error('HTTP ' + res.status);
-        text = await res.text();
-        break;
-      } catch (e) { lastErr = e; }
-    }
-    if (text) {
-      try {
+        const text = await res.text();
         const { employees, monthLabel } = this.parseSheet(this.parseCSV(text));
         this.setState({ employees, monthLabel, loading: false, source: 'live', error: null });
         try { localStorage.setItem('clx-cache', JSON.stringify({ employees, monthLabel, ts: Date.now() })); } catch (e) {}
@@ -543,6 +539,4 @@ class Component extends DCLogic {
     };
   }
 }
-</script>
-</body>
-</html>
+</scri
