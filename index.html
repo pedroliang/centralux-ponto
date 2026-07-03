@@ -91,8 +91,11 @@
             <div style="background: #0c1428; padding: 14px 18px; display: flex; align-items: center; gap: 12px;">
               <div style="width: 36px; height: 36px; border-radius: 10px; background: #101a30; border: 1px solid #1e2c4a; display: grid; place-items: center; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: #38bdf8; flex-shrink: 0;">{{ s.id }}</div>
               <div style="flex: 1; min-width: 0;">
-                <div style="font-size: 13px; font-weight: 600; color: #f2f6ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ s.name }}</div>
+                <div style="font-size: 13px; font-weight: 600; color: {{ s.nameColor }}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ s.name }}</div>
                 <div style="font-size: 10px; color: #6b7ea6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ s.dept }}</div>
+                <sc-if value="{{ s.exp }}" hint-placeholder-val="{{ false }}">
+                  <div style="display: inline-block; margin-top: 4px; font-size: 8px; font-weight: 700; letter-spacing: 0.1em; color: #ff2d55; border: 1px solid rgba(255,45,85,0.5); border-radius: 5px; padding: 1px 6px; font-family: 'JetBrains Mono', monospace;">EXP</div>
+                </sc-if>
               </div>
               <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
                 <span style="font-size: 11px; color: #6b7ea6; font-family: 'JetBrains Mono', monospace;">R$</span>
@@ -177,12 +180,15 @@
           </sc-if>
 
           <sc-if value="{{ hasSelection }}" hint-placeholder-val="{{ false }}">
-            <div style="background: linear-gradient(165deg, #0e1730, #0a1120); border: 1px solid #1e2c4a; border-radius: 16px; overflow: hidden;" data-screen-label="Relatório individual">
+            <div style="background: linear-gradient(165deg, #0e1730, #0a1120); border: 1px solid {{ sel.cardBorder }}; box-shadow: {{ sel.cardGlow }}; border-radius: 16px; overflow: hidden;" data-screen-label="Relatório individual">
 
               <div style="padding: 22px 26px; border-bottom: 1px solid #16203a; display: flex; align-items: center; gap: 18px; flex-wrap: wrap;">
                 <div>
-                  <div style="font-size: 21px; font-weight: 700; color: #f2f6ff;">{{ sel.name }}</div>
+                  <div style="font-size: 21px; font-weight: 700; color: {{ sel.nameColor }};">{{ sel.name }}</div>
                   <div style="font-size: 12px; color: #6b7ea6; font-family: 'JetBrains Mono', monospace; margin-top: 3px;">ID {{ sel.id }} · {{ sel.dept }}</div>
+                  <sc-if value="{{ sel.exp }}" hint-placeholder-val="{{ false }}">
+                    <div style="display: inline-block; margin-top: 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: #ff2d55; border: 1px solid rgba(255,45,85,0.55); border-radius: 6px; padding: 3px 9px; font-family: 'JetBrains Mono', monospace; box-shadow: 0 0 10px rgba(255,45,85,0.4);">EM EXPERIÊNCIA</div>
+                  </sc-if>
                 </div>
                 <div style="flex: 1;"></div>
                 <div style="display: flex; align-items: center; gap: 10px;">
@@ -538,6 +544,10 @@ class Component extends DCLogic {
       const rawSalary = st.salaries[selEmp.id];
       sel = {
         id: selEmp.id, name: selEmp.name, dept: selEmp.dept,
+        exp: !!selEmp.exp,
+        nameColor: selEmp.exp ? '#ff5c78' : '#f2f6ff',
+        cardBorder: selEmp.exp ? '#ff2d55' : '#1e2c4a',
+        cardGlow: selEmp.exp ? '0 0 16px rgba(255,45,85,0.5)' : 'none',
         salaryInput: rawSalary != null && rawSalary !== '' ? String(rawSalary) : String(selEmp.salary),
         onSalaryInput: ev => this.setSalary(selEmp.id, ev.target.value),
         salaryFmt: this.fmtBRL(selEmp.salary),
@@ -596,8 +606,9 @@ class Component extends DCLogic {
         const raw = st.salaries[e.id];
         const hasCustom = raw != null && raw !== '' && !isNaN(parseFloat(raw));
         return {
-          id: e.id, name: e.name, dept: e.dept,
+          id: e.id, name: e.name, dept: e.dept, exp: !!e.exp,
           value: hasCustom ? String(raw) : String(e.salary),
+          nameColor: e.exp ? '#ff5c78' : '#f2f6ff',
           border: hasCustom ? 'rgba(74,222,128,0.45)' : '#1a2745',
           onInput: ev => this.setSalary(e.id, ev.target.value)
         };
