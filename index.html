@@ -147,11 +147,14 @@
         <!-- ===== Employee list ===== -->
         <div style="display: flex; flex-direction: column; gap: 10px; max-height: calc(100vh - 120px); overflow-y: auto; padding-right: 4px; position: sticky; top: 92px;">
           <sc-for list="{{ employees }}" as="emp" hint-placeholder-count="6">
-            <div onClick="{{ emp.onSelect }}" style="background: {{ emp.cardBg }}; border: 1px solid {{ emp.cardBorder }}; border-radius: 14px; padding: 14px 16px; cursor: pointer; display: flex; align-items: center; gap: 14px; transition: border-color 0.15s;" style-hover="border-color: #38bdf8;">
+            <div onClick="{{ emp.onSelect }}" style="background: {{ emp.cardBg }}; border: 1px solid {{ emp.cardBorder }}; box-shadow: {{ emp.cardGlow }}; border-radius: 14px; padding: 14px 16px; cursor: pointer; display: flex; align-items: center; gap: 14px; transition: border-color 0.15s;" style-hover="border-color: #38bdf8;">
               <div style="width: 42px; height: 42px; border-radius: 12px; background: #101a30; border: 1px solid #1e2c4a; display: grid; place-items: center; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; color: #38bdf8; flex-shrink: 0;">{{ emp.id }}</div>
               <div style="flex: 1; min-width: 0;">
-                <div style="font-size: 14px; font-weight: 600; color: #f2f6ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ emp.name }}</div>
+                <div style="font-size: 14px; font-weight: 600; color: {{ emp.nameColor }}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ emp.name }}</div>
                 <div style="font-size: 11px; color: #6b7ea6; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ emp.dept }}</div>
+                <sc-if value="{{ emp.exp }}" hint-placeholder-val="{{ false }}">
+                  <div style="display: inline-block; margin-top: 5px; font-size: 9px; font-weight: 700; letter-spacing: 0.1em; color: #ff2d55; border: 1px solid rgba(255,45,85,0.55); border-radius: 6px; padding: 2px 7px; font-family: 'JetBrains Mono', monospace; box-shadow: 0 0 8px rgba(255,45,85,0.4);">EXPERIÊNCIA</div>
+                </sc-if>
               </div>
               <div style="text-align: right; flex-shrink: 0;">
                 <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; color: #38bdf8;">{{ emp.otLabel }}</div>
@@ -387,9 +390,13 @@ class Component extends DCLogic {
       if (nomeIdx === -1) continue;
       const nextVal = from => { for (let k = from + 1; k < r.length; k++) if (r[k]) return r[k]; return ''; };
       const id = nextVal(idIdx);
-      const name = nextVal(nomeIdx);
+      let name = nextVal(nomeIdx);
       const depIdx = r.findIndex(c => /^Depart/i.test(c));
-      const dept = depIdx > -1 ? (nextVal(depIdx) || '—') : '—';
+      let dept = depIdx > -1 ? (nextVal(depIdx) || '—') : '—';
+      const expTag = /\s*\[\s*exp\s*\]/i;
+      const isExp = expTag.test(name) || expTag.test(dept);
+      name = name.replace(expTag, '').trim();
+      dept = dept.replace(expTag, '').trim() || '—';
       const dayRow = (rows[i + 1] || []).map(c => (c || '').trim());
       const dowRow = (rows[i + 2] || []).map(c => (c || '').trim());
       const punchRow = (rows[i + 3] || []).map(c => (c || '').trim());
@@ -403,7 +410,7 @@ class Component extends DCLogic {
         const times = (punchRow[c] || '').split(/\s+/).map(t => this.toMin(t)).filter(v => v != null);
         days.push({ day: d, dow: dw, times });
       }
-      if (name && days.length) employees.push({ id, name, dept, days });
+      if (name && days.length) employees.push({ id, name, dept, days, exp: isExp });
       i += 3;
     }
     if (!employees.length) throw new Error('Formato da planilha não reconhecido (nenhum bloco ID/Nome encontrado).');
@@ -494,12 +501,14 @@ class Component extends DCLogic {
     );
 
     const employees = filtered.map(e => ({
-      id: e.id, name: e.name, dept: e.dept,
+      id: e.id, name: e.name, dept: e.dept, exp: !!e.exp,
       otLabel: e.otMin ? '+' + this.fmtH(e.otMin) : '—',
       delayLabel: e.delayMin ? '⚠ ' + this.fmtH(e.delayMin) : 'sem atraso',
       delayColor: e.delayMin ? '#fbbf24' : '#3d4d72',
-      cardBg: st.selectedId === e.id ? 'linear-gradient(160deg, #10203c, #0c1830)' : '#0c1324',
-      cardBorder: st.selectedId === e.id ? '#38bdf8' : '#16203a',
+      cardBg: st.selectedId === e.id ? 'linear-gradient(160deg, #10203c, #0c1830)' : (e.exp ? 'rgba(255,45,85,0.06)' : '#0c1324'),
+      cardBorder: e.exp ? '#ff2d55' : (st.selectedId === e.id ? '#38bdf8' : '#16203a'),
+      cardGlow: e.exp ? '0 0 14px rgba(255,45,85,0.55)' : 'none',
+      nameColor: e.exp ? '#ff5c78' : '#f2f6ff',
       onSelect: () => this.setState({ selectedId: e.id })
     }));
 
