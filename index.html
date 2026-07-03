@@ -412,7 +412,7 @@ class Component extends DCLogic {
 
   cfg() {
     return {
-      entryTol: 15,
+      entryTol: 5,
       lunchTolExtra: 5,
       exitTol: Math.max(0, Math.round(this.props.exitToleranceMin ?? 15)),
       coef: this.props.otCoefficient ?? 1.6,
