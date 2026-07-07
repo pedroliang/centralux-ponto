@@ -617,4 +617,19 @@ class Component extends DCLogic {
       deptChips: depts.map(d => ({
         label: d,
         bg: st.dept === d ? 'rgba(56,189,248,0.14)' : '#0d1526',
-        border: st.dept === d 
+        border: st.dept === d ? '#38bdf8' : '#1a2745',
+        color: st.dept === d ? '#38bdf8' : '#8fa3cc',
+        onClick: () => this.setState({ dept: d })
+      })),
+      employees,
+      emptyList: employees.length === 0,
+      noSelection: !sel,
+      hasSelection: !!sel,
+      sel: sel || {},
+      exitTolLabel: cfg.exitTol
+    };
+  }
+}
+</script>
+</body>
+</html>
