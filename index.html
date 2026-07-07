@@ -252,7 +252,7 @@
                   </div>
                 </div>
                 <div style="margin-top: 16px; padding: 14px 18px; background: rgba(56,189,248,0.05); border: 1px solid #16203a; border-radius: 12px; font-size: 14px; color: #a7b6d6; line-height: 1.9;">
-                  <span style="color: #38bdf8; font-weight: 600;">Regras:</span> entrada 08:30 (tolerância 5 min) · almoço 1h (tolerância 5 min) · saída 17:30 (sáb 12:30) · H.E. contada em minutos exatos até 21:00 (sáb 16:30) · valor = hora normal × 1,6 · saída até {{ exitTolLabel }} min após o horário não gera H.E.
+                  <span style="color: #38bdf8; font-weight: 600;">Regras:</span> entrada 08:30 (tolerância 5 min) · almoço 1h contada a partir da 2ª batida (ex.: saiu 13:07 → volta até 14:07; voltou 14:10 = 3 min de atraso, em minutos exatos) · sáb e dom não têm almoço · saída 17:30 (sáb 12:30) · H.E. começa a contar {{ exitTolLabel }} min após a saída (17:35 · sáb 12:35), em minutos exatos até 21:00 (sáb 16:30) · domingo é sempre H.E. · valor = hora normal × 1,6
                 </div>
               </div>
             </div>
@@ -266,7 +266,7 @@
 <script type="text/x-dc" data-dc-script data-props="{
   &quot;defaultSalary&quot;: { &quot;editor&quot;: &quot;int&quot;, &quot;default&quot;: 2200, &quot;tsType&quot;: &quot;number&quot;, &quot;min&quot;: 1000, &quot;max&quot;: 20000, &quot;step&quot;: 50, &quot;unit&quot;: &quot;R$&quot;, &quot;section&quot;: &quot;Regras de cálculo&quot; },
   &quot;otCoefficient&quot;: { &quot;editor&quot;: &quot;float&quot;, &quot;default&quot;: 1.6, &quot;tsType&quot;: &quot;number&quot;, &quot;min&quot;: 1, &quot;max&quot;: 3, &quot;step&quot;: 0.1, &quot;section&quot;: &quot;Regras de cálculo&quot; },
-  &quot;exitToleranceMin&quot;: { &quot;editor&quot;: &quot;int&quot;, &quot;default&quot;: 15, &quot;tsType&quot;: &quot;number&quot;, &quot;min&quot;: 0, &quot;max&quot;: 60, &quot;step&quot;: 5, &quot;unit&quot;: &quot;min&quot;, &quot;section&quot;: &quot;Regras de cálculo&quot; }
+  &quot;exitToleranceMin&quot;: { &quot;editor&quot;: &quot;int&quot;, &quot;default&quot;: 5, &quot;tsType&quot;: &quot;number&quot;, &quot;min&quot;: 0, &quot;max&quot;: 60, &quot;step&quot;: 5, &quot;unit&quot;: &quot;min&quot;, &quot;section&quot;: &quot;Regras de cálculo&quot; }
 }">
 class Component extends DCLogic {
   state = {
@@ -426,8 +426,7 @@ class Component extends DCLogic {
   cfg() {
     return {
       entryTol: 5,
-      lunchTolExtra: 5,
-      exitTol: Math.max(0, Math.round(this.props.exitToleranceMin ?? 15)),
+      exitTol: Math.max(0, Math.round(this.props.exitToleranceMin ?? 5)),
       coef: this.props.otCoefficient ?? 1.6,
       defaultSalary: this.props.defaultSalary ?? 2200
     };
@@ -459,17 +458,19 @@ class Component extends DCLogic {
 
     let lunchDelay = 0, countedBreak = 0;
     if (!isSat && hasBreak) {
-      lunchDelay = breakMin > 60 + cfg.lunchTolExtra ? breakMin - 60 : 0;
-      countedBreak = breakMin <= 60 + cfg.lunchTolExtra ? 60 : breakMin;
+      // Almoço: 1h contada da 2ª batida (saída p/ almoço). Voltou depois do prazo = atraso em minutos exatos.
+      // Ex.: saiu 13:07 → deve voltar 14:07; voltou 14:10 = 3 min de atraso.
+      lunchDelay = Math.max(0, breakMin - 60);
+      countedBreak = Math.max(60, breakMin);
     } else if (isSat) {
       countedBreak = breakMin;
     }
 
     const normal = Math.max(0, Math.min(exit, schedExit) - effEntry - countedBreak);
     let ot = 0;
-    if (exit > schedExit) {
-      const raw = Math.min(exit, otEnd) - schedExit;
-      if (raw >= cfg.exitTol) ot = raw; // minutos exatos, sem arredondar p/ cima
+    const otStart = schedExit + cfg.exitTol; // H.E. começa a contar após a tolerância de saída (17:35 / sáb 12:35)
+    if (exit > otStart) {
+      ot = Math.min(exit, otEnd) - otStart; // minutos exatos, contados a partir de otStart
     }
     const earlyExit = Math.max(0, schedExit - exit);
     return { present: true, delay: entryDelay + lunchDelay, normal, ot, entry, exit, breakStart, breakEnd, earlyExit };
@@ -616,20 +617,4 @@ class Component extends DCLogic {
       deptChips: depts.map(d => ({
         label: d,
         bg: st.dept === d ? 'rgba(56,189,248,0.14)' : '#0d1526',
-        border: st.dept === d ? '#38bdf8' : '#1a2745',
-        color: st.dept === d ? '#38bdf8' : '#8fa3cc',
-        onClick: () => this.setState({ dept: d })
-      })),
-      employees,
-      emptyList: employees.length === 0,
-      noSelection: !sel,
-      hasSelection: !!sel,
-      sel: sel || {},
-      exitTolLabel: cfg.exitTol
-    };
-  }
-}
-</script>
-</body>
-</html>
-      
+        border: st.dept === d 
