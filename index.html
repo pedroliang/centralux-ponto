@@ -350,28 +350,36 @@ class Component extends DCLogic {
 
   async load(silent) {
     if (!silent) this.setState({ loading: true, error: null });
+    // O feed "export?format=csv" inclui as linhas de meses agrupados/recolhidos;
+    // o gviz omite linhas ocultas. Por isso o export vem primeiro.
     const urls = [
-      `https://docs.google.com/spreadsheets/d/${this.SHEET_ID}/gviz/tq?tqx=out:csv&headers=0&gid=${this.GID}`,
       `https://docs.google.com/spreadsheets/d/${this.SHEET_ID}/export?format=csv&gid=${this.GID}`,
+      `https://docs.google.com/spreadsheets/d/${this.SHEET_ID}/gviz/tq?tqx=out:csv&headers=0&gid=${this.GID}`,
       `https://docs.google.com/spreadsheets/d/${this.SHEET_ID}/gviz/tq?tqx=out:csv&gid=${this.GID}`
     ];
     let lastErr = null;
+    let best = null; // mantém o resultado com MAIS meses entre as fontes que funcionarem
     for (const url of urls) {
       try {
         const res = await fetch(url);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const text = await res.text();
         const { months } = this.parseSheet(this.parseCSV(text));
-        let selectedMonthKey = this.state.selectedMonthKey;
-        // Default = mês mais atual (primeiro da lista já ordenada). Mantém a
-        // escolha manual do usuário se o mês ainda existir na planilha.
-        if (!selectedMonthKey || !months.find(m => m.key === selectedMonthKey)) {
-          selectedMonthKey = months[0].key;
-        }
-        this.setState({ months, selectedMonthKey, loading: false, source: 'live', error: null });
-        try { localStorage.setItem('clx-cache', JSON.stringify({ months, ts: Date.now() })); } catch (e) {}
-        return;
+        if (!best || months.length > best.length) best = months;
+        if (best.length > 1) break; // já temos histórico de mais de um mês
       } catch (e) { lastErr = e; }
+    }
+    if (best) {
+      const months = best;
+      let selectedMonthKey = this.state.selectedMonthKey;
+      // Default = mês mais atual (primeiro da lista já ordenada). Mantém a
+      // escolha manual do usuário se o mês ainda existir na planilha.
+      if (!selectedMonthKey || !months.find(m => m.key === selectedMonthKey)) {
+        selectedMonthKey = months[0].key;
+      }
+      this.setState({ months, selectedMonthKey, loading: false, source: 'live', error: null });
+      try { localStorage.setItem('clx-cache', JSON.stringify({ months, ts: Date.now() })); } catch (e) {}
+      return;
     }
     if (silent) return;
     // fallback: cache
