@@ -59,7 +59,16 @@
         </div>
       </div>
       <div style="flex: 1;"></div>
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #8fa3cc; text-transform: uppercase; letter-spacing: 0.1em;">{{ monthLabel }}</div>
+      <div style="position: relative;">
+        <button onClick="{{ onToggleMonthMenu }}" style="display: flex; align-items: center; gap: 8px; background: #0d1526; border: 1px solid #1a2745; color: #8fa3cc; border-radius: 10px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.08em;" style-hover="border-color: #38bdf8; color: #38bdf8;">{{ monthLabel }} <span style="font-size: 9px; opacity: 0.8;">▼</span></button>
+        <sc-if value="{{ showMonthMenu }}" hint-placeholder-val="{{ false }}">
+          <div style="position: absolute; top: calc(100% + 8px); left: 0; min-width: 190px; background: #0b1224; border: 1px solid #1e2c4a; border-radius: 12px; padding: 6px; box-shadow: 0 16px 44px rgba(0,0,0,0.55); z-index: 60;">
+            <sc-for list="{{ monthOptions }}" as="mo" hint-placeholder-count="3">
+              <div onClick="{{ mo.onClick }}" style="padding: 9px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.06em; cursor: pointer; color: {{ mo.color }}; background: {{ mo.bg }};" style-hover="background: rgba(56,189,248,0.10);">{{ mo.label }}</div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
       <div style="display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 20px; background: #0d1526; border: 1px solid #1a2745;">
         <span style="width: 8px; height: 8px; border-radius: 50%; background: {{ statusColor }}; animation: pulse-dot 2s infinite;"></span>
         <span style="font-size: 12px; color: #8fa3cc; font-family: 'JetBrains Mono', monospace;">{{ statusLabel }}</span>
@@ -278,7 +287,8 @@
 class Component extends DCLogic {
   state = {
     loading: true, error: null, source: null,
-    employees: [], monthLabel: '', search: '', dept: 'Todos',
+    months: [], selectedMonthKey: null, showMonthMenu: false,
+    search: '', dept: 'Todos',
     selectedId: null, salaries: {}, delayOverrides: {}, showSalaries: false, isAdmin: false,
     showLogin: false, loginEmail: '', loginPw: '', loginErr: ''
   };
@@ -351,9 +361,15 @@ class Component extends DCLogic {
         const res = await fetch(url);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const text = await res.text();
-        const { employees, monthLabel } = this.parseSheet(this.parseCSV(text));
-        this.setState({ employees, monthLabel, loading: false, source: 'live', error: null });
-        try { localStorage.setItem('clx-cache', JSON.stringify({ employees, monthLabel, ts: Date.now() })); } catch (e) {}
+        const { months } = this.parseSheet(this.parseCSV(text));
+        let selectedMonthKey = this.state.selectedMonthKey;
+        // Default = mês mais atual (primeiro da lista já ordenada). Mantém a
+        // escolha manual do usuário se o mês ainda existir na planilha.
+        if (!selectedMonthKey || !months.find(m => m.key === selectedMonthKey)) {
+          selectedMonthKey = months[0].key;
+        }
+        this.setState({ months, selectedMonthKey, loading: false, source: 'live', error: null });
+        try { localStorage.setItem('clx-cache', JSON.stringify({ months, ts: Date.now() })); } catch (e) {}
         return;
       } catch (e) { lastErr = e; }
     }
@@ -361,9 +377,13 @@ class Component extends DCLogic {
     // fallback: cache
     try {
       const cache = JSON.parse(localStorage.getItem('clx-cache') || 'null');
-      if (cache && cache.employees && cache.employees.length) {
+      if (cache && cache.months && cache.months.length) {
+        let selectedMonthKey = this.state.selectedMonthKey;
+        if (!selectedMonthKey || !cache.months.find(m => m.key === selectedMonthKey)) {
+          selectedMonthKey = cache.months[0].key;
+        }
         this.setState({
-          employees: cache.employees, monthLabel: cache.monthLabel, loading: false, source: 'cache',
+          months: cache.months, selectedMonthKey, loading: false, source: 'cache',
           error: 'Não foi possível atualizar da planilha agora — exibindo os últimos dados salvos (' + new Date(cache.ts).toLocaleString('pt-BR') + '). Erro: ' + (lastErr && lastErr.message)
         });
         return;
@@ -394,16 +414,15 @@ class Component extends DCLogic {
     return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
   }
 
-  parseSheet(rows) {
-    let monthLabel = '';
-    const monthRe = /(janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\s*\/?\s*(\d{4})/i;
-    for (const r of rows) {
-      for (const c of r) {
-        const m = monthRe.exec(c || '');
-        if (m) { monthLabel = m[1].toUpperCase() + ' / ' + m[2]; break; }
-      }
-      if (monthLabel) break;
-    }
+  monthIndexPt(name) {
+    const n = (name || '').toLowerCase().replace('ç', 'c');
+    const list = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+    const i = list.indexOf(n);
+    return i === -1 ? 0 : i + 1;
+  }
+
+  // Extrai os blocos ID/Nome de um conjunto de linhas (um mês).
+  parseEmployees(rows) {
     const employees = [];
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i].map(c => (c || '').trim());
@@ -436,8 +455,45 @@ class Component extends DCLogic {
       if (name && days.length) employees.push({ id, name, dept, days, exp: isExp });
       i += 3;
     }
-    if (!employees.length) throw new Error('Formato da planilha não reconhecido (nenhum bloco ID/Nome encontrado).');
-    return { employees, monthLabel };
+    return employees;
+  }
+
+  parseSheet(rows) {
+    const monthRe = /(janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\s*\/?\s*(\d{4})/i;
+    // Cada célula de cabeçalho de mês (ex.: "julho / 2026") inicia uma seção;
+    // todos os blocos abaixo dela pertencem a esse mês, até o próximo cabeçalho.
+    const sections = [];
+    let current = null;
+    for (let i = 0; i < rows.length; i++) {
+      let hit = null;
+      for (const c of rows[i]) { const m = monthRe.exec(c || ''); if (m) { hit = m; break; } }
+      if (hit) {
+        const label = hit[1].toUpperCase() + ' / ' + hit[2];
+        current = sections.find(s => s.key === label);
+        if (!current) {
+          current = { key: label, label, monthNum: this.monthIndexPt(hit[1]), year: parseInt(hit[2], 10), rows: [] };
+          sections.push(current);
+        }
+        continue;
+      }
+      if (current) current.rows.push(rows[i]);
+    }
+
+    let months;
+    if (sections.length) {
+      months = sections
+        .map(s => ({ key: s.key, label: s.label, monthNum: s.monthNum, year: s.year, employees: this.parseEmployees(s.rows) }))
+        .filter(m => m.employees.length);
+    } else {
+      // Formato antigo, sem cabeçalho de mês: trata a planilha inteira como um mês.
+      months = [{ key: '—', label: '—', monthNum: 0, year: 0, employees: this.parseEmployees(rows) }];
+    }
+
+    if (!months.length) throw new Error('Formato da planilha não reconhecido (nenhum bloco ID/Nome encontrado).');
+
+    // Mais recente primeiro.
+    months.sort((a, b) => (b.year * 12 + b.monthNum) - (a.year * 12 + a.monthNum));
+    return { months };
   }
 
   cfg() {
@@ -509,10 +565,14 @@ class Component extends DCLogic {
     const st = this.state;
     const norm = s => (s || '').toString().toLowerCase();
 
-    const computed = st.employees.map(e => {
+    const monthData = st.months.find(m => m.key === st.selectedMonthKey) || st.months[0] || { employees: [], label: '—' };
+    const monthEmployees = monthData.employees || [];
+    const monthLabel = monthData.label || '—';
+
+    const computed = monthEmployees.map(e => {
       const dayResults = e.days.map(d => {
         const r = { ...d, ...this.computeDay(d, cfg) };
-        r.delayKey = st.monthLabel + '|' + e.id + '|' + d.day;
+        r.delayKey = monthLabel + '|' + e.id + '|' + d.day;
         const ov = st.delayOverrides[r.delayKey];
         const ovMin = ov != null && ov !== '' ? parseInt(ov, 10) : NaN;
         r.delayEdited = !isNaN(ovMin);
@@ -606,9 +666,17 @@ class Component extends DCLogic {
 
     return {
       loading: st.loading,
-      ready: !st.loading && st.employees.length > 0,
+      ready: !st.loading && monthEmployees.length > 0,
       errorMsg: st.error || false,
-      monthLabel: st.monthLabel || '—',
+      monthLabel: monthData.label || '—',
+      showMonthMenu: st.showMonthMenu,
+      onToggleMonthMenu: () => this.setState({ showMonthMenu: !st.showMonthMenu }),
+      monthOptions: st.months.map(m => ({
+        key: m.key, label: m.label,
+        bg: m.key === st.selectedMonthKey ? 'rgba(56,189,248,0.14)' : 'transparent',
+        color: m.key === st.selectedMonthKey ? '#38bdf8' : '#c3d0ec',
+        onClick: () => this.setState({ selectedMonthKey: m.key, showMonthMenu: false })
+      })),
       statusColor, statusLabel,
       statEmployees: computed.length,
       statOtHours: this.fmtH(totOt) === '—' ? '0h00' : this.fmtH(totOt),
