@@ -233,7 +233,7 @@
               <div style="padding: 20px 26px 26px;">
                 <div style="font-size: 12px; color: #8fa3cc; text-transform: uppercase; letter-spacing: 0.12em; font-family: 'JetBrains Mono', monospace; margin-bottom: 12px;">Espelho de ponto — {{ monthLabel }}</div>
                 <div style="overflow-x: auto; border: 1px solid #16203a; border-radius: 12px;">
-                  <div style="display: grid; grid-template-columns: 52px 52px 1fr 1fr 1fr 1fr 90px 90px 90px 100px; min-width: 880px; font-family: 'JetBrains Mono', monospace; font-size: 12px;">
+                  <div style="display: grid; grid-template-columns: 52px 52px 1fr 1fr 1fr 1fr 90px 90px 90px 100px 104px; min-width: 990px; font-family: 'JetBrains Mono', monospace; font-size: 12px;">
                     <div style="padding: 10px 8px; background: #0c1428; color: #6b7ea6; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #16203a;">Dia</div>
                     <div style="padding: 10px 8px; background: #0c1428; color: #6b7ea6; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #16203a;">Sem</div>
                     <div style="padding: 10px 8px; background: #0c1428; color: #6b7ea6; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #16203a;">Entrada</div>
@@ -244,14 +244,15 @@
                     <div style="padding: 10px 8px; background: #0c1428; color: #6b7ea6; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #16203a;">H. normal</div>
                     <div style="padding: 10px 8px; background: #0c1428; color: #6b7ea6; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #16203a;">H. extra</div>
                     <div style="padding: 10px 8px; background: #0c1428; color: #6b7ea6; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #16203a;">Valor H.E.</div>
+                    <div style="padding: 10px 8px; background: #0c1428; color: #6b7ea6; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #16203a;">Marcar</div>
                     <sc-for list="{{ sel.rows }}" as="d" hint-placeholder-count="10">
                       <div style="display: contents;">
-                        <div style="padding: 9px 8px; background: {{ d.bg }}; color: #dbe4f5; border-bottom: 1px solid #101a30;">{{ d.day }}</div>
+                        <div style="padding: 9px 8px; background: {{ d.bg }}; color: {{ d.textColor }}; border-bottom: 1px solid #101a30;">{{ d.day }}</div>
                         <div style="padding: 9px 8px; background: {{ d.bg }}; color: {{ d.dowColor }}; border-bottom: 1px solid #101a30;">{{ d.dow }}</div>
-                        <div style="padding: 9px 8px; background: {{ d.bg }}; color: #a9b8d8; border-bottom: 1px solid #101a30;">{{ d.in }}</div>
-                        <div style="padding: 9px 8px; background: {{ d.bg }}; color: #a9b8d8; border-bottom: 1px solid #101a30;">{{ d.lunchOut }}</div>
-                        <div style="padding: 9px 8px; background: {{ d.bg }}; color: #a9b8d8; border-bottom: 1px solid #101a30;">{{ d.lunchIn }}</div>
-                        <div style="padding: 9px 8px; background: {{ d.bg }}; color: #a9b8d8; border-bottom: 1px solid #101a30;">{{ d.out }}</div>
+                        <div style="padding: 9px 8px; background: {{ d.bg }}; color: {{ d.timeColor }}; border-bottom: 1px solid #101a30;">{{ d.in }}</div>
+                        <div style="padding: 9px 8px; background: {{ d.bg }}; color: {{ d.timeColor }}; border-bottom: 1px solid #101a30;">{{ d.lunchOut }}</div>
+                        <div style="padding: 9px 8px; background: {{ d.bg }}; color: {{ d.timeColor }}; border-bottom: 1px solid #101a30;">{{ d.lunchIn }}</div>
+                        <div style="padding: 9px 8px; background: {{ d.bg }}; color: {{ d.timeColor }}; border-bottom: 1px solid #101a30;">{{ d.out }}</div>
                         <div style="padding: 5px 6px; background: {{ d.bg }}; border-bottom: 1px solid #101a30;">
                           <sc-if value="{{ d.canEditDelay }}" hint-placeholder-val="{{ false }}">
                             <input value="{{ d.delayInput }}" onInput="{{ d.onDelayInput }}" title="Atraso em minutos — edite se necessário (vazio = automático)" style="width: 100%; background: #0d1526; border: 1px solid {{ d.delayBorder }}; border-radius: 6px; padding: 4px 6px; color: {{ d.delayColor }}; font-size: 12px; font-family: 'JetBrains Mono', monospace; outline: none; text-align: right;" style-focus="border-color: #fbbf24;">
@@ -260,15 +261,23 @@
                             <span style="color: {{ d.delayColor }};">{{ d.delay }}</span>
                           </sc-if>
                         </div>
-                        <div style="padding: 9px 8px; background: {{ d.bg }}; color: #dbe4f5; border-bottom: 1px solid #101a30;">{{ d.normal }}</div>
+                        <div style="padding: 9px 8px; background: {{ d.bg }}; color: {{ d.textColor }}; border-bottom: 1px solid #101a30;">{{ d.normal }}</div>
                         <div style="padding: 9px 8px; background: {{ d.bg }}; color: {{ d.otColor }}; font-weight: 600; border-bottom: 1px solid #101a30;">{{ d.ot }}</div>
                         <div style="padding: 9px 8px; background: {{ d.bg }}; color: {{ d.otColor }}; border-bottom: 1px solid #101a30;">{{ d.otVal }}</div>
+                        <div style="padding: 5px 6px; background: {{ d.bg }}; border-bottom: 1px solid #101a30;">
+                          <button onClick="{{ d.onMarkClick }}" title="{{ d.markTitle }}" style="width: 100%; background: {{ d.markBg }}; border: 1px solid {{ d.markBorder }}; box-shadow: {{ d.markGlow }}; color: {{ d.markColor }}; border-radius: 6px; padding: 4px 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; cursor: {{ d.markCursor }}; font-family: 'JetBrains Mono', monospace;" style-hover="filter: brightness(1.35);">{{ d.markLabel }}</button>
+                        </div>
                       </div>
                     </sc-for>
                   </div>
                 </div>
                 <div style="margin-top: 16px; padding: 14px 18px; background: rgba(56,189,248,0.05); border: 1px solid #16203a; border-radius: 12px; font-size: 14px; color: #a7b6d6; line-height: 1.9;">
                   <span style="color: #38bdf8; font-weight: 600;">Regras:</span> entrada 08:30 (tolerância 5 min) · almoço 1h contada a partir da 2ª batida (ex.: saiu 13:07 → volta até 14:07; voltou 14:10 = 3 min de atraso, em minutos exatos) · sáb e dom não têm almoço · saída 17:30 (sáb 12:30) · H.E. começa a contar {{ exitTolLabel }} min após a saída (17:35 · sáb 12:35), em minutos exatos até 21:00 (sáb 16:30) · domingo é sempre H.E. · sair antes de 17:30 (sáb 12:30) conta a diferença como atraso · valor = hora normal × 1,6 · admin: coluna “Atraso” é editável em minutos (vazio = cálculo automático)
+                  <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #16203a;">
+                    <span style="color: #ff073a; font-weight: 700; text-shadow: 0 0 8px rgba(255,7,58,0.8);">FALTA</span> (vermelho neon) zera as horas extras e os atrasos do dia ·
+                    <span style="color: #39ff14; font-weight: 700; text-shadow: 0 0 8px rgba(57,255,20,0.8);">FERIADO</span> (verde neon) zera os atrasos e conta todas as horas trabalhadas como H.E. ·
+                    clique no botão da coluna <b>Marcar</b> para alternar — → FALTA → FERIADO → — (somente admin logado; as marcações ficam salvas neste navegador).
+                  </div>
                 </div>
               </div>
             </div>
@@ -289,7 +298,7 @@ class Component extends DCLogic {
     loading: true, error: null, source: null,
     months: [], selectedMonthKey: null, showMonthMenu: false,
     search: '', dept: 'Todos',
-    selectedId: null, salaries: {}, delayOverrides: {}, showSalaries: false, isAdmin: false,
+    selectedId: null, salaries: {}, delayOverrides: {}, dayMarks: {}, showSalaries: false, isAdmin: false,
     showLogin: false, loginEmail: '', loginPw: '', loginErr: ''
   };
 
@@ -307,6 +316,17 @@ class Component extends DCLogic {
     if (v === '') delete delayOverrides[key]; else delayOverrides[key] = v;
     this.setState({ delayOverrides });
     try { localStorage.setItem('clx-delays', JSON.stringify(delayOverrides)); } catch (e) {}
+  }
+
+  // Marcação manual do dia: '' (normal) -> 'falta' -> 'feriado' -> ''
+  cycleMark(key) {
+    if (!this.state.isAdmin) return;
+    const dayMarks = { ...this.state.dayMarks };
+    const cur = dayMarks[key] || '';
+    const next = cur === '' ? 'falta' : (cur === 'falta' ? 'feriado' : '');
+    if (next === '') delete dayMarks[key]; else dayMarks[key] = next;
+    this.setState({ dayMarks });
+    try { localStorage.setItem('clx-marks', JSON.stringify(dayMarks)); } catch (e) {}
   }
 
   ADMIN_EMAIL = 'pedro.liang@gmail.com';
@@ -339,6 +359,7 @@ class Component extends DCLogic {
   componentDidMount() {
     try { this.setState({ salaries: JSON.parse(localStorage.getItem('clx-salaries') || '{}') }); } catch (e) {}
     try { this.setState({ delayOverrides: JSON.parse(localStorage.getItem('clx-delays') || '{}') }); } catch (e) {}
+    try { this.setState({ dayMarks: JSON.parse(localStorage.getItem('clx-marks') || '{}') }); } catch (e) {}
     try { if (localStorage.getItem('clx-admin') === this.ADMIN_HASH) this.setState({ isAdmin: true }); } catch (e) {}
     this.load();
     this._autoRefresh = setInterval(() => this.load(true), 30000);
@@ -581,6 +602,23 @@ class Component extends DCLogic {
       const dayResults = e.days.map(d => {
         const r = { ...d, ...this.computeDay(d, cfg) };
         r.delayKey = monthLabel + '|' + e.id + '|' + d.day;
+        r.mark = st.dayMarks[r.delayKey] || '';
+
+        if (r.mark === 'falta') {
+          // FALTA: nao ha jornada — zera H.E. e o atraso automatico
+          r.ot = 0; r.normal = 0; r.delay = 0;
+        } else if (r.mark === 'feriado') {
+          // FERIADO: sem atraso; tudo que foi trabalhado vira hora extra
+          r.delay = 0; r.normal = 0;
+          if (r.present && r.entry != null && r.exit != null) {
+            let brk = 0;
+            for (let i = 1; i + 1 < r.times.length; i += 2) brk += r.times[i + 1] - r.times[i];
+            r.ot = Math.max(0, r.exit - r.entry - brk);
+          } else {
+            r.ot = 0;
+          }
+        }
+
         const ov = st.delayOverrides[r.delayKey];
         const ovMin = ov != null && ov !== '' ? parseInt(ov, 10) : NaN;
         r.delayEdited = !isNaN(ovMin);
@@ -617,29 +655,44 @@ class Component extends DCLogic {
     const selEmp = computed.find(e => e.id === st.selectedId) || null;
     let sel = null;
     if (selEmp) {
+      const MARK_STYLE = {
+        falta:   { label: 'FALTA',   color: '#ff073a', bg: 'rgba(255,7,58,0.14)',  border: '#ff073a', glow: '0 0 10px rgba(255,7,58,0.85)' },
+        feriado: { label: 'FERIADO', color: '#39ff14', bg: 'rgba(57,255,20,0.13)', border: '#39ff14', glow: '0 0 10px rgba(57,255,20,0.85)' }
+      };
       const rows = selEmp.dayResults.map(d => {
         const isWknd = d.dow === 'SAB' || d.dow === 'DOM';
         const otVal = (d.ot / 60) * selEmp.rate * cfg.coef;
+        const ms = MARK_STYLE[d.mark] || null;
         return {
           day: String(d.day).padStart(2, '0'),
           dow: d.dow,
-          dowColor: isWknd ? '#38bdf8' : '#6b7ea6',
+          dowColor: ms ? ms.color : (isWknd ? '#38bdf8' : '#6b7ea6'),
+          markLabel: ms ? ms.label : '—',
+          markColor: ms ? ms.color : '#3d4d72',
+          markBg: ms ? ms.bg : '#0d1526',
+          markBorder: ms ? ms.border : '#1a2745',
+          markGlow: ms ? ms.glow : 'none',
+          markTitle: st.isAdmin ? 'Clique para alternar: — / FALTA / FERIADO' : 'Somente o administrador pode marcar',
+          markCursor: st.isAdmin ? 'pointer' : 'default',
+          onMarkClick: () => this.cycleMark(d.delayKey),
+          textColor: ms ? ms.color : '#dbe4f5',
+          timeColor: ms ? ms.color : '#a9b8d8',
           in: this.fmtT(d.entry),
           lunchOut: this.fmtT(d.breakStart),
           lunchIn: this.fmtT(d.breakEnd),
           out: this.fmtT(d.exit),
           delay: d.delay ? this.fmtH(d.delay) : '—',
-          delayColor: d.delay ? '#fbbf24' : '#3d4d72',
+          delayColor: ms ? ms.color : (d.delay ? '#fbbf24' : '#3d4d72'),
           canEditDelay: st.isAdmin,
           showDelayText: !st.isAdmin,
           delayInput: d.delayEdited || d.delay ? String(d.delay) : '',
           delayBorder: d.delayEdited ? 'rgba(251,191,36,0.6)' : '#1a2745',
           onDelayInput: ev => this.setDelayOverride(d.delayKey, ev.target.value),
-          normal: d.present ? this.fmtH(d.normal) : '—',
+          normal: d.mark === 'falta' ? '—' : (d.present ? this.fmtH(d.normal) : '—'),
           ot: d.ot ? '+' + this.fmtH(d.ot) : '—',
-          otColor: d.ot ? '#38bdf8' : '#3d4d72',
+          otColor: ms ? ms.color : (d.ot ? '#38bdf8' : '#3d4d72'),
           otVal: d.ot ? this.fmtBRL(otVal) : '—',
-          bg: d.ot ? 'rgba(56,189,248,0.05)' : (d.present ? 'transparent' : 'rgba(255,255,255,0.015)')
+          bg: ms ? ms.bg : (d.ot ? 'rgba(56,189,248,0.05)' : (d.present ? 'transparent' : 'rgba(255,255,255,0.015)'))
         };
       });
       const rawSalary = st.salaries[selEmp.id];
