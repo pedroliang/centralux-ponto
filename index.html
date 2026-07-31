@@ -276,7 +276,7 @@
                   <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #16203a;">
                     <span style="color: #ff073a; font-weight: 700; text-shadow: 0 0 8px rgba(255,7,58,0.8);">FALTA</span> (vermelho neon) zera as horas extras e os atrasos do dia ·
                     <span style="color: #39ff14; font-weight: 700; text-shadow: 0 0 8px rgba(57,255,20,0.8);">FERIADO</span> (verde neon) zera os atrasos e conta todas as horas trabalhadas como H.E. ·
-                    clique no botão da coluna <b>Marcar</b> para alternar — → FALTA → FERIADO → — (somente admin logado; as marcações ficam salvas neste navegador).
+                    para marcar um dia, escreva <b>FALTA</b> ou <b>FERIADO</b> (maiúsculo ou minúsculo) na célula das batidas de ponto da planilha do Google Sheets — assim a marcação vale para todos que abrem o site. Os horários podem ficar na mesma célula (ex.: <b>FERIADO 08:30 12:00 13:00 17:30</b>). A coluna <b>Marcar</b> exibe a marcação; dias marcados pela planilha ficam como somente leitura.
                   </div>
                 </div>
               </div>
@@ -319,8 +319,9 @@ class Component extends DCLogic {
   }
 
   // Marcação manual do dia: '' (normal) -> 'falta' -> 'feriado' -> ''
-  cycleMark(key) {
+  cycleMark(key, fromSheet) {
     if (!this.state.isAdmin) return;
+    if (fromSheet) return; // dia marcado pela planilha é somente leitura
     const dayMarks = { ...this.state.dayMarks };
     const cur = dayMarks[key] || '';
     const next = cur === '' ? 'falta' : (cur === 'falta' ? 'feriado' : '');
@@ -478,8 +479,16 @@ class Component extends DCLogic {
         if (!d || !['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB', 'DOM'].includes(dw)) continue;
         if (d < prev) break; // next month spillover
         prev = d;
-        const times = (punchRow[c] || '').split(/\s+/).map(t => this.toMin(t)).filter(v => v != null);
-        days.push({ day: d, dow: dw, times });
+        const rawCell = punchRow[c] || '';
+        // Detecta marcação escrita na própria célula das batidas (maiúsc./minúsc.):
+        // FALTA e FERIADO. Ex.: "FERIADO 08:30 12:00 13:00 17:30" ainda extrai os horários.
+        let sheetMark = '';
+        if (/feriado/i.test(rawCell)) sheetMark = 'feriado';
+        else if (/falta/i.test(rawCell)) sheetMark = 'falta';
+        // Remove as palavras-marca antes do parse dos horários.
+        const cleanCell = rawCell.replace(/feriado/ig, ' ').replace(/falta/ig, ' ');
+        const times = cleanCell.split(/\s+/).map(t => this.toMin(t)).filter(v => v != null);
+        days.push({ day: d, dow: dw, times, sheetMark });
       }
       if (name && days.length) employees.push({ id, name, dept, days, exp: isExp });
       i += 3;
@@ -602,7 +611,9 @@ class Component extends DCLogic {
       const dayResults = e.days.map(d => {
         const r = { ...d, ...this.computeDay(d, cfg) };
         r.delayKey = monthLabel + '|' + e.id + '|' + d.day;
-        r.mark = st.dayMarks[r.delayKey] || '';
+        // A marca vinda da planilha (sheetMark) tem prioridade sobre a marca manual (localStorage).
+        r.fromSheet = !!d.sheetMark;
+        r.mark = d.sheetMark || st.dayMarks[r.delayKey] || '';
 
         if (r.mark === 'falta') {
           // FALTA: nao ha jornada — zera H.E. e o atraso automatico
@@ -672,9 +683,9 @@ class Component extends DCLogic {
           markBg: ms ? ms.bg : '#0d1526',
           markBorder: ms ? ms.border : '#1a2745',
           markGlow: ms ? ms.glow : 'none',
-          markTitle: st.isAdmin ? 'Clique para alternar: — / FALTA / FERIADO' : 'Somente o administrador pode marcar',
-          markCursor: st.isAdmin ? 'pointer' : 'default',
-          onMarkClick: () => this.cycleMark(d.delayKey),
+          markTitle: d.fromSheet ? 'Marcado na planilha (célula das batidas) — somente leitura' : (st.isAdmin ? 'Clique para alternar: — / FALTA / FERIADO' : 'Somente o administrador pode marcar'),
+          markCursor: (st.isAdmin && !d.fromSheet) ? 'pointer' : 'default',
+          onMarkClick: () => this.cycleMark(d.delayKey, d.fromSheet),
           textColor: ms ? ms.color : '#dbe4f5',
           timeColor: ms ? ms.color : '#a9b8d8',
           in: this.fmtT(d.entry),
