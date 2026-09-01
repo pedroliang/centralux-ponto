@@ -272,7 +272,7 @@
                   </div>
                 </div>
                 <div style="margin-top: 16px; padding: 14px 18px; background: rgba(56,189,248,0.05); border: 1px solid #16203a; border-radius: 12px; font-size: 14px; color: #a7b6d6; line-height: 1.9;">
-                  <span style="color: #38bdf8; font-weight: 600;">Regras:</span> entrada 08:30 (tolerância 5 min) · almoço 1h contada a partir da 2ª batida (ex.: saiu 13:07 → volta até 14:07; voltou 14:10 = 3 min de atraso, em minutos exatos) · sáb e dom não têm almoço · saída 17:30 (sáb 12:30) · H.E. começa a contar {{ exitTolLabel }} min após a saída (17:35 · sáb 12:35), em minutos exatos até 21:00 (sáb 16:30) · domingo é sempre H.E. · sair antes de 17:30 (sáb 12:30) conta a diferença como atraso · valor = hora normal × 1,6 · admin: coluna “Atraso” é editável em minutos (vazio = cálculo automático)
+                  <span style="color: #38bdf8; font-weight: 600;">Regras:</span> entrada 08:30 (tolerância 5 min) · almoço 1h contada a partir da 2ª batida (ex.: saiu 13:07 → volta até 14:07; voltou 14:10 = 3 min de atraso, em minutos exatos) · sáb e dom não têm almoço · saída 17:30 (sáb 12:30) · H.E. começa a contar {{ exitTolLabel }} min após a saída (17:35 · sáb 12:35), em minutos exatos até 21:00 (sáb 16:30) · <b>domingo é sempre 100% hora extra, do início ao fim</b> (da 1ª à última batida, sem descontar almoço, sem limite de horário e sem atraso) · sair mais de {{ exitTolLabel }} min antes da saída (antes de 17:25 · sáb 12:25) conta a diferença como atraso · valor = hora normal × 1,6 · admin: coluna “Atraso” é editável em minutos (vazio = cálculo automático)
                   <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #16203a;">
                     <span style="color: #ff073a; font-weight: 700; text-shadow: 0 0 8px rgba(255,7,58,0.8);">FALTA</span> (vermelho neon) zera as horas extras e os atrasos do dia ·
                     <span style="color: #39ff14; font-weight: 700; text-shadow: 0 0 8px rgba(57,255,20,0.8);">FERIADO</span> (verde neon) zera os atrasos e conta todas as horas trabalhadas como H.E. ·
@@ -555,8 +555,9 @@ class Component extends DCLogic {
     const breakEnd = hasBreak ? times[2] : null;
 
     if (isSun) {
-      // Domingo: fora da jornada — tudo é hora extra (minutos exatos, sem arredondar)
-      const ot = Math.max(0, exit - entry - breakMin);
+      // Domingo: fora da jornada — TODA a permanência é hora extra, do início ao fim
+      // (da 1ª à última batida, sem descontar almoço e sem teto de horário).
+      const ot = Math.max(0, exit - entry);
       return { present: true, delay: 0, normal: 0, ot, entry, exit, breakStart, breakEnd, earlyExit: 0 };
     }
 
@@ -583,9 +584,11 @@ class Component extends DCLogic {
     if (exit > otStart) {
       ot = Math.min(exit, otEnd) - otStart; // minutos exatos, contados a partir de otStart
     }
-    // Saída antecipada: último ponto antes do horário (17:30 / sáb 12:30) conta a diferença como atraso.
-    // Ex.: foi embora 16:30 na semana = 1h de atraso.
-    const earlyExit = Math.max(0, schedExit - exit);
+    // Saída antecipada: mesma tolerância do início da H.E. (cfg.exitTol). Sair até
+    // exitTol min antes (17:25 / sáb 12:25 com 5 min) NÃO gera atraso; abaixo disso,
+    // conta a diferença em minutos exatos. Ex.: foi embora 16:30 na semana = 1h.
+    const earlyExitLimit = schedExit - cfg.exitTol;
+    const earlyExit = Math.max(0, earlyExitLimit - exit);
     return { present: true, delay: entryDelay + lunchDelay + earlyExit, normal, ot, entry, exit, breakStart, breakEnd, earlyExit };
   }
 
@@ -623,7 +626,10 @@ class Component extends DCLogic {
           r.delay = 0; r.normal = 0;
           if (r.present && r.entry != null && r.exit != null) {
             let brk = 0;
-            for (let i = 1; i + 1 < r.times.length; i += 2) brk += r.times[i + 1] - r.times[i];
+            // Domingo: integral, do início ao fim (não desconta almoço).
+            if (r.dow !== 'DOM') {
+              for (let i = 1; i + 1 < r.times.length; i += 2) brk += r.times[i + 1] - r.times[i];
+            }
             r.ot = Math.max(0, r.exit - r.entry - brk);
           } else {
             r.ot = 0;
