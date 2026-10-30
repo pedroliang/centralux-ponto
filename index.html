@@ -262,7 +262,14 @@
                           </sc-if>
                         </div>
                         <div style="padding: 9px 8px; background: {{ d.bg }}; color: {{ d.textColor }}; border-bottom: 1px solid #101a30;">{{ d.normal }}</div>
-                        <div style="padding: 9px 8px; background: {{ d.bg }}; color: {{ d.otColor }}; font-weight: 600; border-bottom: 1px solid #101a30;">{{ d.ot }}</div>
+                        <div style="padding: 5px 6px; background: {{ d.bg }}; color: {{ d.otColor }}; font-weight: 600; border-bottom: 1px solid #101a30;">
+                          <sc-if value="{{ d.canEditOt }}" hint-placeholder-val="{{ false }}">
+                            <input value="{{ d.otInput }}" onInput="{{ d.onOtInput }}" title="Hora extra em minutos — edite se necessário (vazio = automático)" style="width: 100%; background: #0d1526; border: 1px solid {{ d.otBorder }}; border-radius: 6px; padding: 4px 6px; color: {{ d.otColor }}; font-size: 12px; font-weight: 600; font-family: 'JetBrains Mono', monospace; outline: none; text-align: right;" style-focus="border-color: #38bdf8;">
+                          </sc-if>
+                          <sc-if value="{{ d.showOtText }}" hint-placeholder-val="{{ true }}">
+                            <span style="padding: 4px 2px; display: inline-block;">{{ d.ot }}</span>
+                          </sc-if>
+                        </div>
                         <div style="padding: 9px 8px; background: {{ d.bg }}; color: {{ d.otColor }}; border-bottom: 1px solid #101a30;">{{ d.otVal }}</div>
                         <div style="padding: 5px 6px; background: {{ d.bg }}; border-bottom: 1px solid #101a30;">
                           <button onClick="{{ d.onMarkClick }}" title="{{ d.markTitle }}" style="width: 100%; background: {{ d.markBg }}; border: 1px solid {{ d.markBorder }}; box-shadow: {{ d.markGlow }}; color: {{ d.markColor }}; border-radius: 6px; padding: 4px 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; cursor: {{ d.markCursor }}; font-family: 'JetBrains Mono', monospace;" style-hover="filter: brightness(1.35);">{{ d.markLabel }}</button>
@@ -272,7 +279,7 @@
                   </div>
                 </div>
                 <div style="margin-top: 16px; padding: 14px 18px; background: rgba(56,189,248,0.05); border: 1px solid #16203a; border-radius: 12px; font-size: 14px; color: #a7b6d6; line-height: 1.9;">
-                  <span style="color: #38bdf8; font-weight: 600;">Regras:</span> entrada 08:30 (tolerância 5 min) · almoço 1h contada a partir da 2ª batida (ex.: saiu 13:07 → volta até 14:07; voltou 14:10 = 3 min de atraso, em minutos exatos) · sáb e dom não têm almoço · saída 17:30 (sáb 12:30) · H.E. começa a contar {{ exitTolLabel }} min após a saída (17:35 · sáb 12:35), em minutos exatos até 21:00 (sáb 16:30) · <b>domingo é sempre 100% hora extra, do início ao fim</b> (da 1ª à última batida, sem descontar almoço, sem limite de horário e sem atraso) · sair mais de {{ exitTolLabel }} min antes da saída (antes de 17:25 · sáb 12:25) conta a diferença como atraso · valor = hora normal × 1,6 · admin: coluna “Atraso” é editável em minutos (vazio = cálculo automático)
+                  <span style="color: #38bdf8; font-weight: 600;">Regras:</span> entrada 08:30 (tolerância 5 min) · almoço 1h contada a partir da 2ª batida (ex.: saiu 13:07 → volta até 14:07; voltou 14:10 = 3 min de atraso, em minutos exatos) · sáb e dom não têm almoço · saída 17:30 (sáb 12:30) · <b>H.E. também conta ao bater antes das 08:25</b> (em minutos exatos até 08:25 — ex.: bateu 08:00 = 25 min) · H.E. começa a contar {{ exitTolLabel }} min após a saída (17:35 · sáb 12:35), em minutos exatos até 21:00 (sáb 16:30) · <b>domingo é sempre 100% hora extra, do início ao fim</b> (da 1ª à última batida, sem descontar almoço, sem limite de horário e sem atraso) · sair mais de {{ exitTolLabel }} min antes da saída (antes de 17:25 · sáb 12:25) conta a diferença como atraso · valor = hora normal × 1,6 · admin: colunas “Atraso” e “H. extra” são editáveis em minutos (vazio = cálculo automático)
                   <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #16203a;">
                     <span style="color: #ff073a; font-weight: 700; text-shadow: 0 0 8px rgba(255,7,58,0.8);">FALTA</span> (vermelho neon) zera as horas extras e os atrasos do dia ·
                     <span style="color: #39ff14; font-weight: 700; text-shadow: 0 0 8px rgba(57,255,20,0.8);">FERIADO</span> (verde neon) zera os atrasos e conta todas as horas trabalhadas como H.E. ·
@@ -298,7 +305,7 @@ class Component extends DCLogic {
     loading: true, error: null, source: null,
     months: [], selectedMonthKey: null, showMonthMenu: false,
     search: '', dept: 'Todos',
-    selectedId: null, salaries: {}, delayOverrides: {}, dayMarks: {}, showSalaries: false, isAdmin: false,
+    selectedId: null, salaries: {}, delayOverrides: {}, otOverrides: {}, dayMarks: {}, showSalaries: false, isAdmin: false,
     showLogin: false, loginEmail: '', loginPw: '', loginErr: ''
   };
 
@@ -316,6 +323,15 @@ class Component extends DCLogic {
     if (v === '') delete delayOverrides[key]; else delayOverrides[key] = v;
     this.setState({ delayOverrides });
     try { localStorage.setItem('clx-delays', JSON.stringify(delayOverrides)); } catch (e) {}
+  }
+
+  setOtOverride(key, rawVal) {
+    if (!this.state.isAdmin) return;
+    const otOverrides = { ...this.state.otOverrides };
+    const v = (rawVal || '').trim();
+    if (v === '') delete otOverrides[key]; else otOverrides[key] = v;
+    this.setState({ otOverrides });
+    try { localStorage.setItem('clx-ot', JSON.stringify(otOverrides)); } catch (e) {}
   }
 
   // Marcação manual do dia: '' (normal) -> 'falta' -> 'feriado' -> ''
@@ -365,6 +381,7 @@ class Component extends DCLogic {
   componentDidMount() {
     try { this.setState({ salaries: JSON.parse(localStorage.getItem('clx-salaries') || '{}') }); } catch (e) {}
     try { this.setState({ delayOverrides: JSON.parse(localStorage.getItem('clx-delays') || '{}') }); } catch (e) {}
+    try { this.setState({ otOverrides: JSON.parse(localStorage.getItem('clx-ot') || '{}') }); } catch (e) {}
     try { this.setState({ dayMarks: JSON.parse(localStorage.getItem('clx-marks') || '{}') }); } catch (e) {}
     try { if (Object.values(this.USERS).includes(localStorage.getItem('clx-admin'))) this.setState({ isAdmin: true }); } catch (e) {}
     this.load();
@@ -585,9 +602,14 @@ class Component extends DCLogic {
 
     const normal = Math.max(0, Math.min(exit, schedExit) - effEntry - countedBreak);
     let ot = 0;
+    // H.E. de entrada antecipada: bateu antes de 08:25 (entrada 08:30 - tolerância de 5 min)
+    // conta em minutos exatos até 08:25. Ex.: bateu 08:00 = 25 min de H.E.
+    const earlyOtLimit = schedEntry - cfg.entryTol;
+    const earlyEntryOt = entry < earlyOtLimit ? earlyOtLimit - entry : 0;
+    ot += earlyEntryOt;
     const otStart = schedExit + cfg.exitTol; // H.E. começa a contar após a tolerância de saída (17:35 / sáb 12:35)
     if (exit > otStart) {
-      ot = Math.min(exit, otEnd) - otStart; // minutos exatos, contados a partir de otStart
+      ot += Math.min(exit, otEnd) - otStart; // minutos exatos, contados a partir de otStart
     }
     // Saída antecipada: mesma tolerância do início da H.E. (cfg.exitTol). Sair até
     // exitTol min antes (17:25 / sáb 12:25 com 5 min) NÃO gera atraso; abaixo disso,
@@ -645,6 +667,10 @@ class Component extends DCLogic {
         const ovMin = ov != null && ov !== '' ? parseInt(ov, 10) : NaN;
         r.delayEdited = !isNaN(ovMin);
         if (r.delayEdited) r.delay = Math.max(0, ovMin); // atraso editado manualmente (minutos)
+        const otOv = st.otOverrides[r.delayKey];
+        const otOvMin = otOv != null && otOv !== '' ? parseInt(otOv, 10) : NaN;
+        r.otEdited = !isNaN(otOvMin);
+        if (r.otEdited) r.ot = Math.max(0, otOvMin); // hora extra editada manualmente (minutos)
         return r;
       });
       const otMin = dayResults.reduce((a, d) => a + d.ot, 0);
@@ -713,6 +739,11 @@ class Component extends DCLogic {
           normal: d.mark === 'falta' ? '—' : (d.present ? this.fmtH(d.normal) : '—'),
           ot: d.ot ? '+' + this.fmtH(d.ot) : '—',
           otColor: ms ? ms.color : (d.ot ? '#38bdf8' : '#3d4d72'),
+          canEditOt: st.isAdmin,
+          showOtText: !st.isAdmin,
+          otInput: d.otEdited || d.ot ? String(d.ot) : '',
+          otBorder: d.otEdited ? 'rgba(56,189,248,0.6)' : '#1a2745',
+          onOtInput: ev => this.setOtOverride(d.delayKey, ev.target.value),
           otVal: d.ot ? this.fmtBRL(otVal) : '—',
           bg: ms ? ms.bg : (d.ot ? 'rgba(56,189,248,0.05)' : (d.present ? 'transparent' : 'rgba(255,255,255,0.015)'))
         };
