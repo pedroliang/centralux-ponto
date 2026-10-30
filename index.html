@@ -313,7 +313,7 @@ class Component extends DCLogic {
     if (!this.state.isAdmin) return;
     const salaries = { ...this.state.salaries, [id]: rawVal.replace(',', '.') };
     this.setState({ salaries });
-    try { localStorage.setItem('clx-salaries', JSON.stringify(salaries)); } catch (e) {}
+    try { localStorage.setItem('clx-salaries-v2', JSON.stringify(salaries)); } catch (e) {}
   }
 
   setDelayOverride(key, rawVal) {
@@ -379,7 +379,7 @@ class Component extends DCLogic {
   GID = '540941492';
 
   componentDidMount() {
-    try { this.setState({ salaries: JSON.parse(localStorage.getItem('clx-salaries') || '{}') }); } catch (e) {}
+    try { this.setState({ salaries: JSON.parse(localStorage.getItem('clx-salaries-v2') || '{}') }); } catch (e) {}
     try { this.setState({ delayOverrides: JSON.parse(localStorage.getItem('clx-delays') || '{}') }); } catch (e) {}
     try { this.setState({ otOverrides: JSON.parse(localStorage.getItem('clx-ot') || '{}') }); } catch (e) {}
     try { this.setState({ dayMarks: JSON.parse(localStorage.getItem('clx-marks') || '{}') }); } catch (e) {}
@@ -623,9 +623,18 @@ class Component extends DCLogic {
   fmtH(min) { if (!min) return '—'; return Math.floor(min / 60) + 'h' + String(min % 60).padStart(2, '0'); }
   fmtBRL(v) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
 
+  // Salários oficiais (valem para TODOS que abrem o link). Para mudar de vez, altere aqui e faça o deploy.
+  // Edições na tela "R$ Salários" ficam só no navegador de quem editou.
+  SALARIES = {
+    '5': 2000, '8': 2700, '9': 2000, '10': 2650, '11': 2700,
+    '12': 2500, '16': 2000, '17': 2500, '18': 2150, '19': 2300
+  };
+
   getSalary(id, cfg) {
     const v = parseFloat(this.state.salaries[id]);
-    return isNaN(v) || v <= 0 ? cfg.defaultSalary : v;
+    if (!isNaN(v) && v > 0) return v;
+    const base = this.SALARIES[String(id).trim()] ?? this.SALARIES[String(parseInt(id, 10))];
+    return base > 0 ? base : cfg.defaultSalary;
   }
 
   renderVals() {
