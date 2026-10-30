@@ -332,6 +332,11 @@ class Component extends DCLogic {
 
   ADMIN_EMAIL = 'pedro.liang@gmail.com';
   ADMIN_HASH = '1e799f3f1f995d110a760b84dc3e0df617622747720ea507e5df52e37ebbc4e1';
+  // Usuarios com acesso (e-mail -> SHA-256 da senha)
+  USERS = {
+    'pedro.liang@gmail.com': '1e799f3f1f995d110a760b84dc3e0df617622747720ea507e5df52e37ebbc4e1',
+    'user@user.com': '04f8996da763b7a969b1028ee3007569eaf3a635486ddab211d512c85b9df8fb'
+  };
 
   openLogin() { this.setState({ showLogin: true, loginEmail: '', loginPw: '', loginErr: '' }); }
   closeLogin() { this.setState({ showLogin: false, loginErr: '' }); }
@@ -343,7 +348,7 @@ class Component extends DCLogic {
     try {
       const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
       const hex = Array.from(new Uint8Array(buf)).map(x => x.toString(16).padStart(2, '0')).join('');
-      if (email === this.ADMIN_EMAIL && hex === this.ADMIN_HASH) {
+      if (this.USERS[email] && hex === this.USERS[email]) {
         this.setState({ isAdmin: true, showLogin: false, loginPw: '', loginErr: '' });
         try { localStorage.setItem('clx-admin', hex); } catch (e) {}
       } else {
@@ -361,7 +366,7 @@ class Component extends DCLogic {
     try { this.setState({ salaries: JSON.parse(localStorage.getItem('clx-salaries') || '{}') }); } catch (e) {}
     try { this.setState({ delayOverrides: JSON.parse(localStorage.getItem('clx-delays') || '{}') }); } catch (e) {}
     try { this.setState({ dayMarks: JSON.parse(localStorage.getItem('clx-marks') || '{}') }); } catch (e) {}
-    try { if (localStorage.getItem('clx-admin') === this.ADMIN_HASH) this.setState({ isAdmin: true }); } catch (e) {}
+    try { if (Object.values(this.USERS).includes(localStorage.getItem('clx-admin'))) this.setState({ isAdmin: true }); } catch (e) {}
     this.load();
     this._autoRefresh = setInterval(() => this.load(true), 30000);
   }
